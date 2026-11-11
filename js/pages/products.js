@@ -1,0 +1,117 @@
+(function () {
+  const state = {
+    q: (param('q') || '').trim(),
+    cat: param('cat') || '',
+    sort: param('sort') || 'recommend',
+    fast: param('fast') === '1',
+    free: false,
+    min: '',
+    max: '',
+  };
+  const SORTS = [
+    ['recommend', '추천순'], ['new', '최신순'], ['discount', '할인율순'], ['low', '낮은가격순'], ['high', '높은가격순'], ['reviews', '리뷰많은순'], ['rating', '평점높은순'],
+  ];
+
+  const score = p => p.avgRating * Math.log(p.reviewCount + 2) + (p.sold || 0) * 0.05;
+  const PAGE = 12;
+  let shown = PAGE;
+
+  function filtered() {
+    const q = state.q.toLowerCase();
+    let list = PRODUCTS.filter(p => {
+      if (state.cat && p.category !== state.cat) return false;
+      if (q && !q.split(/\s+/).every(w => (p.name + ' ' + getCategory(p.category).name + ' ' + p.seller).toLowerCase().includes(w))) return false;
+      if (state.fast && !p.fast) return false;
+      if (state.free && !p.freeShip) return false;
+      if (state.min !== '' && p.price < Number(state.min)) return false;
+      if (state.max !== '' && p.price > Number(state.max)) return false;
+      return true;
+    });
+    const sorters = {
+      recommend: (a, b) => score(b) - score(a),
+      new: (a, b) => new Date(b.createdAt) - new Date(a.createdAt) || b.id - a.id,
+      discount: (a, b) => b.discount - a.discount,
+      low: (a, b) => a.price - b.price,
+      high: (a, b) => b.price - a.price,
+      reviews: (a, b) => b.reviewCount - a.reviewCount,
+      rating: (a, b) => b.avgRating - a.avgRating || b.reviewCount - a.reviewCount,
+    };
+    // 품절 상품은 항상 뒤로
+    return list.sort((a, b) => (a.soldOut - b.soldOut) || (sorters[state.sort] || sorters.recommend)(a, b));
+  }
+
+  function title() {
+    if (state.q) return `'${esc(state.q)}' 검색 결과`;
+    if (state.cat) return getCategory(state.cat)?.name || '전체 상품';
+    if (state.sort === 'discount') return '🔥 오늘의 특가';
+    return '전체 상품';
+  }
+
+  function syncUrl() {
+    const sp = new URLSearchParams();
+    if (state.q) sp.set('q', state.q);
+    if (state.cat) sp.set('cat', state.cat);
+    if (state.sort !== 'recommend') sp.set('sort', state.sort);
+    if (state.fast) sp.set('fast', '1');
+    history.replaceState(null, '', 'products.html' + (sp.toString() ? '?' + sp : ''));
+  }
+
+  function catLink(id, name) {
+    const sp = new URLSearchParams();
+    if (id) sp.set('cat', id);
+    if (state.q) sp.set('q', state.q);
+    return `<a class="cat ${state.cat === id ? 'active' : ''}" href="products.html${sp.toString() ? '?' + sp : ''}" data-cat="${id}">${name}</a>`;
+  }
+
+  $('#app').innerHTML = `
+    <div class="list-layout">
+      <details class="card filters" ${matchMedia('(max-width: 860px)').matches ? '' : 'open'}>
+        <summary>🔧 필터 / 카테고리</summary>
+        <div class="group"><h3>카테고리</h3>
+          ${catLink('', '전체')}
+          ${CATEGORIES.map(c => catLink(c.id, c.icon + ' ' + c.name)).join('')}
+        </div>
+        <div class="group"><h3>배송</h3>
+          <label class="check"><input type="checkbox" id="fFast" ${state.fast ? 'checked' : ''}> 🚀 내일도착만</label>
+          <label class="check" style="margin-top:8px"><input type="checkbox" id="fFree"> 무료배송만</label>
+        </div>
+        <div class="group"><h3>가격대</h3>
+          <div class="row"><input class="input" id="fMin" type="number" min="0" placeholder="최소"><input class="input" id="fMax" type="number" min="0" placeholder="최대"></div>
+          <button class="btn btn-sm btn-block" id="fApply" style="margin-top:8px">적용</button>
+        </div>
+      </details>
+      <section>
+        <h1 class="page-title" id="title"></h1>
+        <div class="toolbar">
+          <div class="muted" id="count"></div>
+          <div class="sort-tabs">${SORTS.map(([k, v]) => `<button data-sort="${k}">${v}</button>`).join('')}</div>
+        </div>
+        <div id="results"></div>
+      </section>
+    </div>`;
+
+  function render() {
+    const list = filtered();
+    $('#title').innerHTML = title();
+    $('#count').textContent = `총 ${list.length}개 상품`;
+    $$('[data-sort]').forEach(b => b.classList.toggle('active', b.dataset.sort === state.sort));
+    $('#results').innerHTML = list.length
+      ? `<div class="grid">${list.slice(0, shown).map(productCard).join('')}</div>
+         ${list.length > shown ? `<button class="btn load-more" id="more">상품 더보기 (${shown}/${list.length})</button>` : ''}`
+      : `<div class="empty card"><div class="ico">🔍</div><p>조건에 맞는 상품이 없어요.<br>다른 검색어나 필터를 사용해 보세요.</p><a class="btn btn-outline" href="products.html">전체 상품 보기</a></div>`;
+    syncUrl();
+    const more = $('#more');
+    if (more) more.addEventListener('click', () => { shown += PAGE; render(); });
+  }
+  const reset = () => { shown = PAGE; };
+
+  $$('[data-sort]').forEach(b => b.addEventListener('click', () => { state.sort = b.dataset.sort; reset(); render(); }));
+  $('#fFast').addEventListener('change', e => { state.fast = e.target.checked; reset(); render(); });
+  $('#fFree').addEventListener('change', e => { state.free = e.target.checked; reset(); render(); });
+  $('#fApply').addEventListener('click', () => {
+    let mn = $('#fMin').value, mx = $('#fMax').value;
+    if (mn !== '' && mx !== '' && Number(mn) > Number(mx)) { [mn, mx] = [mx, mn]; $('#fMin').value = mn; $('#fMax').value = mx; }
+    state.min = mn; state.max = mx; reset(); render();
+  });
+  render();
+})();
