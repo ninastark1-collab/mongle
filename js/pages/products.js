@@ -27,8 +27,31 @@
   ];
 
   const score = p => p.avgRating * Math.log(p.reviewCount + 2) + (p.sold || 0) * 0.05;
-  const PAGE = 12;
-  let shown = PAGE;
+  // 페이지 나눔: 화면에 보이는 열 수에 맞춰 한 페이지에 3~4줄만 보여줘요
+  let page = Math.max(1, parseInt(param('page'), 10) || 1);
+  function perPage() {
+    const w = window.innerWidth;
+    const cols = w <= 640 ? 2 : w <= 1024 ? 3 : 4;
+    return cols * (cols === 2 ? 4 : 3); // 휴대폰 8 · 태블릿 9 · PC 12
+  }
+  function pageNums(cur, last) {
+    // 1 … 4 5 6 … 20 처럼 현재 페이지 주변만 보여줘요
+    const set = new Set([1, last, cur - 1, cur, cur + 1].filter(n => n >= 1 && n <= last));
+    if (cur <= 3) [2, 3, 4].forEach(n => n <= last && set.add(n));
+    if (cur >= last - 2) [last - 1, last - 2, last - 3].forEach(n => n >= 1 && set.add(n));
+    const nums = [...set].sort((a, b) => a - b), out = [];
+    nums.forEach((n, i) => { if (i && n - nums[i - 1] > 1) out.push('…'); out.push(n); });
+    return out;
+  }
+  function pager(cur, last) {
+    if (last <= 1) return '';
+    return `<nav class="pager" aria-label="페이지">
+      <button type="button" class="pg pg-nav" data-page="${cur - 1}" ${cur === 1 ? 'disabled' : ''} aria-label="이전 페이지">‹ 이전</button>
+      ${pageNums(cur, last).map(n => n === '…' ? '<span class="pg-gap">…</span>'
+        : `<button type="button" class="pg ${n === cur ? 'on' : ''}" data-page="${n}" ${n === cur ? 'aria-current="page"' : ''}>${n}</button>`).join('')}
+      <button type="button" class="pg pg-nav" data-page="${cur + 1}" ${cur === last ? 'disabled' : ''} aria-label="다음 페이지">다음 ›</button>
+    </nav>`;
+  }
 
   function filtered() {
     const q = state.q.toLowerCase();
@@ -76,6 +99,7 @@
     if (state.live) sp.set('live', '1');
     if (state.care === '초보 추천') sp.set('care', 'easy');
     if (state.stage) sp.set('stage', state.stage);
+    if (page > 1) sp.set('page', page);
     history.replaceState(null, '', 'products.html' + (sp.toString() ? '?' + sp : ''));
   }
 
@@ -169,15 +193,35 @@
       b.classList.toggle('hidden', isAnimalView() && !ANIMAL_SORTS.includes(b.dataset.sort));
       if (b.dataset.sort === 'reviews') b.textContent = isAnimalView() ? '입양후기순' : '리뷰많은순';
     });
+    const size = perPage(), last = Math.max(1, Math.ceil(list.length / size));
+    page = Math.min(Math.max(1, page), last);
+    const from = (page - 1) * size;
     $('#results').innerHTML = list.length
-      ? `<div class="grid">${list.slice(0, shown).map(productCard).join('')}</div>
-         ${list.length > shown ? `<button class="btn load-more" id="more">더 만나보기 (${shown}/${list.length})</button>` : ''}`
+      ? `<div class="grid">${list.slice(from, from + size).map(productCard).join('')}</div>
+         ${pager(page, last)}
+         ${last > 1 ? `<p class="pg-info muted">${from + 1}~${Math.min(from + size, list.length)}번째 · 전체 ${list.length}${list.every(p => p.live) ? '마리' : '개'}</p>` : ''}`
       : `<div class="empty card"><div class="ico">🐾</div><p>조건에 꼭 맞는 친구가 아직 없어요.<br>조건을 조금 풀어보거나, 다음 분양 알림을 받아보세요.</p><a class="btn btn-outline" href="products.html?live=1">모든 친구 만나보기</a></div>`;
     syncUrl();
-    const more = $('#more');
-    if (more) more.addEventListener('click', () => { shown += PAGE; render(); });
+    $$('.pager [data-page]').forEach(b => b.addEventListener('click', () => {
+      page = Number(b.dataset.page);
+      render();
+      const top = $('.toolbar').getBoundingClientRect().top + window.scrollY - 90;
+      window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+    }));
   }
-  const reset = () => { shown = PAGE; };
+  const reset = () => { page = 1; };
+  // 화면 크기가 바뀌면 지금 보던 첫 친구가 들어 있는 페이지로 다시 나눠요
+  let lastSize = perPage(), rt;
+  window.addEventListener('resize', () => {
+    clearTimeout(rt);
+    rt = setTimeout(() => {
+      const size = perPage();
+      if (size === lastSize) return;
+      page = Math.floor(((page - 1) * lastSize) / size) + 1;
+      lastSize = size;
+      render();
+    }, 200);
+  });
 
   $$('[data-sort]').forEach(b => b.addEventListener('click', () => { state.sort = b.dataset.sort; reset(); render(); }));
   render();
