@@ -7,6 +7,7 @@
     live: param('live') === '1',
     care: param('care') === 'easy' ? '초보 추천' : '',
     traits: [],
+    stage: param('stage') || '',
     budget: '',
     free: false,
   };
@@ -37,6 +38,7 @@
       if (state.fast && !p.fast) return false;
       if (state.live && !p.live) return false;
       if (state.care && !(p.pet && p.pet.care === state.care)) return false;
+      if (state.stage && !(p.pet && (state.stage === 'adult' ? p.pet.adult : !p.pet.adult))) return false;
       if (state.traits.length && !(p.pet && state.traits.every(t => (p.pet.traits || []).includes(t)))) return false;
       if (state.free && !p.freeShip) return false;
       if (!inBudget(p)) return false;
@@ -59,6 +61,7 @@
     if (state.q) return `'${esc(state.q)}' 검색 결과`;
     if (state.cat) return getCategory(state.cat)?.name || '전체 상품';
     if (state.care === '초보 추천') return '🌱 처음 함께하기 좋은 친구들';
+    if (state.stage === 'adult') return '🧓 의젓한 어른 친구들';
     if (state.live) return '🏡 가족을 기다리는 친구들';
     if (state.sort === 'discount') return '🔥 오늘의 특가';
     return '전체 상품';
@@ -72,6 +75,7 @@
     if (state.fast) sp.set('fast', '1');
     if (state.live) sp.set('live', '1');
     if (state.care === '초보 추천') sp.set('care', 'easy');
+    if (state.stage) sp.set('stage', state.stage);
     history.replaceState(null, '', 'products.html' + (sp.toString() ? '?' + sp : ''));
   }
 
@@ -107,7 +111,10 @@
       <div class="group"><h3>예산</h3><div class="chip-wrap">${budgets.map(([v, l]) => chip('budget', v, l, state.budget === v)).join('')}</div></div>
       <div class="group side-tip"><h3>🧺 새 가족 맞이 필수 준비물</h3>
         <ul><li>평소 먹던 사료 (갑자기 바꾸지 않기)</li><li>편히 숨을 수 있는 집·방석</li><li>물그릇·밥그릇</li><li>배변 패드·모래 / 사육장</li><li>아이에게 맞는 장난감</li></ul></div>` : `
+      <div class="group side-quiz"><button type="button" class="btn btn-primary btn-block" data-quiz>🧩 나와 맞는 친구 퀴즈</button></div>
       <div class="group"><h3>보기</h3><div class="chip-wrap">${chip('live', '1', '🏡 가족을 기다리는 친구만', state.live)}</div></div>
+      <div class="group"><h3>나이</h3><div class="chip-wrap">
+        ${[['', '전체'], ['baby', '🍼 아기 친구'], ['adult', '🧓 어른 친구']].map(([v, l]) => chip('stage', v, l, state.stage === v)).join('')}</div></div>
       <div class="group"><h3>키우기 난이도</h3><div class="chip-wrap">
         ${[['', '전체'], ['초보 추천', '🌱 처음이에요'], ['보통', '🌿 조금 키워봤어요'], ['경험자 추천', '🌳 경험이 많아요']].map(([v, l]) => chip('care', v, l, state.care === v)).join('')}</div></div>
       <div class="group"><h3>우리 집과 잘 맞는 친구</h3><div class="chip-wrap">
@@ -125,6 +132,7 @@
       else if (g === 'free') state.free = !state.free;
       else if (g === 'care') { state.care = v; if (v) state.live = true; }
       else if (g === 'budget') state.budget = v;
+      else if (g === 'stage') { state.stage = v; if (v) state.live = true; }
       else if (g === 'trait') state.traits = state.traits.includes(v) ? state.traits.filter(x => x !== v) : [...state.traits, v];
       if (g === 'trait' && state.traits.length) state.live = true;
       reset(); render();

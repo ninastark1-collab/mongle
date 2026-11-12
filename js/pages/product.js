@@ -72,11 +72,18 @@
           <div><b>키우기 난이도</b>${esc(p.pet.care)}</div>
         </div>
         ${p.pet.traits && p.pet.traits.length ? `<div class="trait-row">${p.pet.traits.map(t => `<span class="trait">${TRAIT_LABELS[t]}</span>`).join('')}</div>` : ''}` : ''}
+        ${p.live && p.pet ? `<div class="origin-line">🏡 <b>${p.pet.adult ? '이 친구의 이야기' : '태어난 곳'}</b> ${esc(p.pet.origin.place)}${p.pet.origin.visit ? ' · <span class="visit-ok">방문해서 만나볼 수 있어요</span>' : ''}</div>
+        <a class="cost-card" href="#cost" data-jump="desc">
+          <span>💸 함께하는 데 드는 비용</span>
+          <b>한 달 약 ${feeText(p.pet.cost.monthly)}</b>
+          <span class="muted">${p.pet.adult ? '남은' : '평생'} 약 ${p.pet.cost.years}년 · 약 ${feeText(p.pet.cost.lifetime)} · 자세히 →</span>
+        </a>` : ''}
         ${p.live ? `<dl class="ship-box">
           <dt>인계</dt><dd><strong>매장 방문</strong> 또는 <strong>전문 펫택시</strong> 직접 인계 (택배 발송 없음)</dd>
           <dt>함께 드려요</dt><dd>분양 계약서 · 건강 기록 · 먹던 사료 샘플</dd>
           <dt>건강보증</dt><dd>인계 후 15일 이내 질병·폐사 시 치료 지원 또는 교환·환불</dd>
-          <dt>분양 절차</dt><dd>입양 신청서 작성 → 분양자 검토·연락 → 직접 만나 인계</dd>
+          <dt>분양 절차</dt><dd>신청서 → <b>먼저 만나보기</b> → 승인 후 분양비 결제 → 직접 인계</dd>
+          <dt>돌아오기 약속</dt><dd>🤝 함께하기 어려워지면 버리지 말고 몽글로 돌아와요. 새 가족을 함께 찾아드려요.</dd>
           <dt>분양 상태</dt><dd>${p.soldOut ? '<strong>💛 새 가족을 만났어요</strong>' : '<strong style="color:var(--forest)">🏡 가족을 기다리고 있어요</strong>'}</dd>
           <dt>분양자</dt><dd>${esc(p.seller)}</dd>
         </dl>
@@ -108,6 +115,7 @@
               : `<button class="btn btn-outline btn-lg" id="addCart">🧺 준비함에 담기</button>
                <button class="btn btn-primary btn-lg" id="buyNow">바로구매</button>`}
         </div>
+        ${p.live && (KIT[p.category] || []).length ? `<button class="btn btn-block kit-btn" id="kitBtn" style="margin-top:10px">🧺 이 친구 맞이 준비물 한 번에 담기 (${KIT[p.category].length}개)</button>` : ''}
         <button class="link-btn" id="share" style="margin-top:12px">🔗 ${p.live ? '친구 소개 링크 복사' : '상품 링크 복사'}</button>
       </div>
     </div>
@@ -121,6 +129,32 @@
     <div class="tab-panel" id="tab-desc">
       <div class="card">
         <p style="white-space:pre-line">${esc(p.description)}</p>
+        ${p.live && p.pet ? `
+        <h3 class="sub-h">🏡 ${p.pet.adult ? '지금까지의 이야기' : '어디서 태어났나요?'}</h3>
+        <table class="info-table">
+          <tr><th>${p.pet.adult ? '사연' : '태어난 곳'}</th><td>${esc(p.pet.origin.place)}</td></tr>
+          <tr><th>${p.pet.adult ? '함께 드려요' : '부모'}</th><td>${esc(p.pet.origin.parents)}</td></tr>
+          ${p.pet.birth ? `<tr><th>생일</th><td>${fmtDate(p.pet.birth)} (${esc(p.pet.age)})</td></tr>` : ''}
+          <tr><th>방문</th><td>${p.pet.origin.visit ? '👋 신청 후 직접 만나보고 결정할 수 있어요 (화상 만남도 가능)' : '-'}</td></tr>
+        </table>
+        <h3 class="sub-h">🩺 건강 기록</h3>
+        <table class="info-table">
+          <tr><th>예방접종</th><td>${p.pet.vaccines.map(v => `✓ ${esc(v)}`).join('<br>')}</td></tr>
+          ${p.pet.nextVaccine ? `<tr><th>다음 접종</th><td><b>${esc(p.pet.nextVaccine.name)}</b> · ${fmtDate(p.pet.nextVaccine.date)} 예정 <span class="muted">(입양 후 건강 캘린더로 알려드려요)</span></td></tr>` : ''}
+          ${p.pet.genetic ? `<tr><th>유전 질환 검사</th><td>${esc(p.pet.genetic)}</td></tr>` : ''}
+          <tr><th>동물등록</th><td>${esc(p.pet.chip)}</td></tr>
+          <tr><th>중성화</th><td>${esc(p.pet.neuter)}</td></tr>
+        </table>
+        <h3 class="sub-h" id="cost">💸 함께하는 데 드는 비용 <span class="muted" style="font-size:13px;font-weight:400">(평균 예상, 지역·병원에 따라 달라요)</span></h3>
+        <div class="cost-break">
+          ${[['🍚 사료·간식', 0], ['🏥 병원·예방', 1], ['🧸 미용·용품', 2], ['🛡️ 펫보험', 3]].map(([l, k]) => p.pet.cost.parts[k] ? `<div><span>${l}</span><div class="bar"><i style="width:${Math.round(p.pet.cost.parts[k] / p.pet.cost.monthly * 100)}%"></i></div><b>${feeText(p.pet.cost.parts[k])}</b></div>` : '').join('')}
+          <div class="cost-total"><span>한 달 합계</span><b>약 ${feeText(p.pet.cost.monthly)}</b></div>
+          <div class="cost-total"><span>${p.pet.adult ? '남은' : '평생'} 약 ${p.pet.cost.years}년</span><b>약 ${feeText(p.pet.cost.lifetime)}</b></div>
+          <p class="muted" style="font-size:12px;margin:6px 0 0">큰 병이나 수술은 따로 수십~수백만 원이 들 수 있어요. ${p.category === 'dog' || p.category === 'cat' ? '펫보험을 함께 고려해 주세요.' : '특수동물 진료가 가능한 병원을 미리 알아두세요.'}</p>
+        </div>
+        <h3 class="sub-h">🏠 이렇게 준비해 주세요</h3>
+        <ul class="habitat">${(HABITAT[p.category] || []).map(h => `<li>${esc(h)}</li>`).join('')}</ul>
+        <a class="link-btn" href="help.html?tab=guide">📖 ${esc(cat.name)} 입양 후 첫 일주일 가이드</a>` : ''}
         <div style="max-width:420px;margin:20px auto">${thumb({ ...p, soldOut: false })}</div>
         <table class="info-table">
           <tr><th>카테고리</th><td>${cat.name}</td></tr>
@@ -253,6 +287,19 @@
       location.href = Auth.current() ? 'checkout.html' : 'login.html?redirect=checkout.html';
     });
   }
+
+  // ---------- 준비물 한 번에 담기 ----------
+  const kitBtn = $('#kitBtn');
+  if (kitBtn) kitBtn.addEventListener('click', () => {
+    const n = (KIT[p.category] || []).filter(([id, opt]) => Cart.add(id, opt, 1)).length;
+    toast(n ? `준비물 ${n}개를 입양 준비함에 담았어요. 🧺` : '지금은 담을 수 있는 준비물이 없어요.', 'cart.html', '준비함 보기');
+  });
+  const jump = $('[data-jump]');
+  if (jump) jump.addEventListener('click', e => {
+    e.preventDefault();
+    showTab('desc');
+    setTimeout(() => $('#cost').scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
+  });
 
   // ---------- 재입고 알림 (품절 상품) ----------
   const rs = $('#restock');

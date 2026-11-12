@@ -78,6 +78,11 @@ const PETS = [
   [53, 'fish', '흰동가리 2마리 · 말미잘 단짝', 40000, '1544552866-d3ed42536cfd', '🐠', 6, '3개월', '격리 검역 완료', '6~10년', 3, '8~10cm · 해수어항 필요', []],
   [54, 'reptile', '레오파드 게코 · 점박이 아기', 130000, '1646678195713-4f26cd5cbc40', '🦎', 3, '2개월', '건강 검진 완료', '15~20년', 1, '20~25cm · 파충류 입문', ['랜덤']],
   [55, 'insect', '장수풍뎅이 한 쌍 · 여름방학 친구', 25000, '1758954596098-079c4e173eb7', '🪲', 8, '성충', '브리딩 개체', '2~4개월 (성충)', 1, '5~8cm · 아이 관찰용', []],
+  // 어른·노령 친구 (재입양)
+  [56, 'dog', '골든 리트리버 · 5살 듬직한 형', 300000, '1693615775129-f2004d6e3e0b', '🦮', 1, '5살', '종합백신·광견병 완료 · 중성화 완료', '10~12년', 2, '30kg 대형견 · 산책 매너 좋음', ['남아']],
+  [57, 'dog', '골든 리트리버 · 9살 할아버지', 100000, '1608469926865-b2d2200bb2f6', '🐕', 1, '9살', '종합백신·광견병 완료 · 노령견 종합검진 완료', '10~12년', 2, '28kg 대형견 · 느긋함', ['남아']],
+  [58, 'cat', '코리안 숏헤어 · 4살 고등어 어른냥', 50000, '1550606873-e09a0d1a5a93', '🐈', 1, '4살', '종합백신·광견병 완료 · 중성화 완료', '15~20년', 1, '4.5kg · 독립적', ['남아']],
+  [59, 'small', '토끼 · 3살 회색 신사', 50000, '1609151354448-c4a53450c6e9', '🐰', 1, '3살', '건강 검진 · 중성화 완료', '8~12년', 2, '2kg · 배변 훈련 완료', ['남아']],
 ];
 
 // 용품: [id, 이름, 판매가, 정가, 사진ID, 이모지, 옵션]
@@ -141,6 +146,10 @@ const PET_NOTES = {
   53: '말미잘 속에 쏙 숨는 단짝이에요. 해수어항 경험이 있는 분께 보내고 싶어요.',
   54: '점박이 무늬의 아기 게코예요. 순하고 조용해서 처음 키우는 분께도 좋아요.',
   55: '아이와 여름방학 관찰 일기를 쓰기 좋은 한 쌍이에요. 젤리를 정말 잘 먹어요.',
+  56: '보호자님의 해외 이주로 새 가족을 찾아요. 산책 매너가 좋고 사람을 정말 좋아해요.',
+  57: '하루 대부분을 낮잠으로 보내는 순한 할아버지예요. 남은 시간을 따뜻하게 함께해 주실 분을 찾아요.',
+  58: '혼자서도 잘 지내는 의젓한 어른냥이에요. 조용한 집에서 무릎 위 낮잠을 좋아해요.',
+  59: '배변을 잘 가리고 손길에 익숙한 어른 토끼예요. 차분한 가족과 잘 어울려요.',
 };
 // 우리 집과 잘 맞는지: 생활 궁합
 const TRAIT_LABELS = {
@@ -160,13 +169,129 @@ const TRAIT_OVERRIDE = {
   11: ['apt', 'quiet'], 13: ['apt'], 47: ['apt', 'kids'],
   14: ['apt', 'quiet', 'alone', 'kids'], 50: ['apt', 'quiet', 'alone', 'kids'], 17: ['apt', 'quiet'], 18: ['apt', 'quiet', 'alone'], 19: ['apt'], 20: ['apt'],
   21: ['apt', 'kids'], 52: ['apt', 'kids'], 22: ['apt', 'kids'], 24: ['apt', 'alone'], 25: ['apt', 'quiet', 'alone'],
+  56: ['kids'], 57: ['quiet', 'kids'], 58: ['apt', 'alone', 'quiet'], 59: ['apt', 'quiet'],
 };
+// ======================================================================
+// 입양 전 꼭 알아야 할 정보: 태어난 곳 · 기록 · 비용 · 사육 환경 (데모 값)
+// ======================================================================
+const TODAY = new Date('2026-11-12T00:00:00+09:00');
+
+// '3개월' '6주' '5살' → 주 단위 나이
+function ageWeeks(age) {
+  const n = parseFloat(age);
+  if (/주/.test(age)) return n;
+  if (/개월/.test(age)) return Math.round(n * 4.35);
+  if (/살/.test(age)) return Math.round(n * 52);
+  return null;
+}
+function addDays(d, n) { const x = new Date(d); x.setDate(x.getDate() + n); return x; }
+function lifespanYears(s) {
+  const nums = (String(s).match(/\d+/g) || []).map(Number);
+  if (!nums.length) return 1;
+  const avg = nums.length > 1 ? (nums[0] + nums[1]) / 2 : nums[0];
+  return /개월/.test(s) ? avg / 12 : avg;
+}
+
+// 예방접종 스케줄 (생후 주수 기준, 일반적인 권장 일정)
+const VACCINE_PLAN = {
+  dog: [[6, '종합백신(DHPPL) 1차'], [8, '종합백신 2차 · 코로나 장염 1차'], [10, '종합백신 3차 · 코로나 장염 2차'], [12, '종합백신 4차 · 켄넬코프 1차'], [14, '종합백신 5차 · 인플루엔자'], [16, '광견병 · 항체가 검사']],
+  cat: [[8, '종합백신(FVRCP) 1차'], [11, '종합백신 2차'], [14, '종합백신 3차'], [16, '광견병 · 항체가 검사']],
+};
+
+// 견종·묘종별 유전 질환 검사 (부모 또는 개체 검사 결과, 데모)
+const GENETIC = {
+  1: '슬개골 탈구 검사 정상', 2: '슬개골·기관 협착 검사 정상', 3: '슬개골 정상 · 진행성 망막위축(PRA) 유전자 음성', 4: '슬개골 검사 정상',
+  5: '슬개골 검사 정상', 6: '퇴행성 척수병증(DM) 유전자 음성', 7: '부모견 고관절 검사 정상', 8: '디스크(IVDD) 주의 안내 · 슬개골 정상',
+  43: '부모견 고관절·안구 검사 정상', 44: '안구 검진 정상', 45: '부모견 심장(이첨판) 검진 정상',
+  9: '비대성 심근병증(HCM) 유전자 음성', 10: '다낭성 신장(PKD) 유전자 음성', 11: '다낭성 신장(PKD) 유전자 음성', 13: '피루베이트 키나아제 결핍(PK-def) 음성',
+  47: '진행성 망막위축(PRA) 유전자 음성', 48: '글리코겐 축적병(GSD IV) 음성', 56: '고관절 검사 정상', 57: '노령견 종합검진(혈액·심장·관절) 완료',
+};
+
+// 아빠·엄마 이름 (데모)
+const PARENT_NAMES = ['보리', '콩이', '두부', '하늘', '모카', '라떼', '구름', '쿠키', '단비', '호두', '별이', '초코'];
+
+// 한 달 예상 비용 (원): 사료·간식 / 병원·예방 / 미용·용품 / 펫보험
+const MONTHLY = {
+  dogS: [50000, 30000, 25000, 25000], dogM: [70000, 40000, 30000, 35000], dogL: [110000, 50000, 35000, 45000],
+  cat: [45000, 25000, 20000, 20000], catL: [50000, 25000, 35000, 20000],
+  rodent: [10000, 5000, 8000, 0], guinea: [25000, 8000, 10000, 0], rabbit: [30000, 10000, 15000, 0], exoticM: [35000, 15000, 15000, 0],
+  bird: [12000, 5000, 8000, 0], fish: [5000, 0, 15000, 0], marine: [10000, 0, 40000, 0],
+  reptile: [20000, 5000, 15000, 0], reptileL: [30000, 8000, 22000, 0], insect: [5000, 0, 5000, 0],
+};
+const COST_KIND = {
+  1: 'dogS', 2: 'dogS', 3: 'dogS', 4: 'dogS', 8: 'dogS', 44: 'dogS', 45: 'dogS', 5: 'dogM', 6: 'dogM', 7: 'dogL', 43: 'dogL', 56: 'dogL', 57: 'dogL',
+  11: 'catL', 48: 'catL', 14: 'rodent', 50: 'rodent', 18: 'rodent', 15: 'guinea', 16: 'rabbit', 49: 'rabbit', 51: 'rabbit', 59: 'rabbit',
+  17: 'exoticM', 19: 'exoticM', 20: 'exoticM', 53: 'marine', 32: 'reptileL',
+};
+const COST_DEFAULT = { dog: 'dogM', cat: 'cat', small: 'rodent', bird: 'bird', fish: 'fish', reptile: 'reptile', insect: 'insect' };
+
+// 분류별 사육 환경
+const HABITAT = {
+  dog: ['실내 온도 20~24℃, 미끄럼 방지 매트', '하루 2번, 30분 이상 산책 (예방접종 끝난 뒤부터)', '혼자 있는 시간은 하루 4~6시간 이하가 좋아요'],
+  cat: ['높이 오를 수 있는 캣타워와 숨숨집', '화장실은 고양이 수 + 1개', '방묘창·방묘문으로 탈출 방지'],
+  small: ['직사광선과 소음을 피한 조용한 자리', '종에 맞는 넉넉한 케이지와 은신처', '온도 20~24℃ (친칠라는 25℃ 이하 필수)'],
+  bird: ['날개를 펼칠 수 있는 넉넉한 새장', '하루 10~12시간 수면, 밤에는 덮개', '주방 연기·코팅 프라이팬 가스는 위험해요'],
+  fish: ['물을 미리 잡아 둔 어항 (최소 1~2주)', '수온 24~26℃ · 주 1회 1/4 환수', '처음엔 적은 수로 시작하기'],
+  reptile: ['종에 맞는 사육장 (게코 45cm↑, 비어디 90cm↑)', '바닥 온도 차이(핫존 30℃ 안팎)와 UVB 조명', '은신처·습식 은신처 준비'],
+  insect: ['톱밥(발효 매트)이 깔린 사육통', '곤충 젤리와 놀이목', '직사광선 없는 서늘한 곳 (20~25℃)'],
+};
+
+// 분류별 맞이 준비물 (용품 id와 옵션)
+const KIT = {
+  dog: [[36, '강아지용'], [37, 'M'], [42, '베이지']],
+  cat: [[36, '고양이용'], [38, ''], [39, '내추럴'], [42, '민트']],
+  small: [[38, ''], [42, '베이지']],
+  bird: [[40, '']],
+  fish: [[41, '']],
+  reptile: [], insect: [],
+};
+
+// 태어난 곳 · 부모 · 기록 등 상세 정보 만들기
+function petDetail(id, category, age, health, lifespan) {
+  const weeks = ageWeeks(age);
+  const adult = /살/.test(age);
+  const birth = weeks ? addDays(TODAY, -weeks * 7) : null;
+  const parentA = PARENT_NAMES[id % PARENT_NAMES.length], parentB = PARENT_NAMES[(id * 7 + 3) % PARENT_NAMES.length];
+
+  let origin;
+  if (adult) origin = { place: '가정에서 키우다 보호자 사정으로 새 가족을 찾아요 (재입양)', parents: '이전 보호자가 쓴 생활 기록과 병원 기록을 함께 드려요', visit: true };
+  else if (category === 'dog' || category === 'cat') origin = { place: '몽글 협력 가정 브리더 (경기도 · 동물생산업 허가, 데모)', parents: `아빠 ${parentA} · 엄마 ${parentB} — 집에서 함께 지내고 있어요. 만남 때 직접 볼 수 있어요`, visit: true };
+  else if (category === 'fish') origin = { place: '국내 양식장 → 몽글에서 2주 격리 검역', parents: '양식장 수질 기록 보관', visit: true };
+  else if (category === 'reptile') origin = { place: '국내 브리더의 인공 번식(CB) 개체', parents: `부모 개체 사진·혈통 기록 보관 (아빠 ${parentA} · 엄마 ${parentB})`, visit: true };
+  else if (category === 'insect') origin = { place: '국내 브리딩 (야생 채집 아님)', parents: '사육 기록 보관', visit: true };
+  else origin = { place: '몽글 협력 소동물 가정 브리더', parents: `엄마 ${parentB}와 형제들이 함께 지내요. 만남 때 볼 수 있어요`, visit: true };
+
+  // 예방접종 기록
+  const plan = VACCINE_PLAN[category];
+  let vaccines = [], nextVaccine = null;
+  if (plan && adult) vaccines = ['기초 예방접종 완료', '광견병 완료 (매년 추가접종)'];
+  else if (plan && weeks) {
+    vaccines = plan.filter(([w]) => w <= weeks).map(([w, name]) => `${name} (${fmtShort(addDays(birth, w * 7))})`);
+    const nx = plan.find(([w]) => w > weeks);
+    if (nx) nextVaccine = { name: nx[1], date: addDays(birth, nx[0] * 7).toISOString() };
+  } else vaccines = [health];
+
+  const chip = category === 'dog' ? (adult ? '동물등록 완료 · 인계 시 보호자 변경' : '내장칩 동물등록 완료 · 인계 시 보호자 변경')
+    : category === 'cat' ? '동물등록 선택 (내장칩 권장, 인계 전 등록 가능)' : '등록 대상 아님';
+  const neuter = adult ? '중성화 완료' : (category === 'dog' || category === 'cat' || ['16', '19'].includes(String(id))) ? '생후 6개월 이후 수의사와 상담 권장' : '해당 없음';
+
+  const kind = COST_KIND[id] || COST_DEFAULT[category];
+  const parts = MONTHLY[kind];
+  const monthly = parts.reduce((a, b) => a + b, 0);
+  const years = Math.max(adult ? 2 : 0.5, lifespanYears(lifespan) - (adult ? parseFloat(age) : 0));
+  return {
+    birth: birth ? birth.toISOString() : null, adult, origin, vaccines, nextVaccine, chip, neuter,
+    genetic: GENETIC[id] || '', cost: { monthly, parts, years: Math.round(years * 10) / 10, lifetime: Math.round(monthly * 12 * years / 10000) * 10000 },
+  };
+}
+function fmtShort(d) { return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`; }
+
 const SHIP_EMOJI = '🐾';
 const BASE_PRODUCTS = [
   ...PETS.map(([id, category, name, price, photo, emoji, stock, age, health, lifespan, care, size, options], i) => ({
     id, category, name, price, originalPrice: price, emoji, options,
     image: PHOTO(photo), live: true,
-    pet: { age, health, lifespan, care: CARE[care], size, note: PET_NOTES[id] || '', traits: TRAIT_OVERRIDE[id] || TRAIT_DEFAULT[category] || [] },
+    pet: { age, health, lifespan, care: CARE[care], size, note: PET_NOTES[id] || '', traits: TRAIT_OVERRIDE[id] || TRAIT_DEFAULT[category] || [], ...petDetail(id, category, age, health, lifespan) },
     rating: 4.7 + (id % 3) / 10, reviews: 20 + (id * 37) % 260,
     fast: false, freeShip: true,
     gradient: GRADIENTS[id % GRADIENTS.length],

@@ -1,5 +1,6 @@
 (function () {
   const FAQ = [
+    ['분양', '결제는 언제 하나요?', '입양 신청서를 보낼 때는 결제하지 않아요. 직접(또는 화상으로) 만나보고 분양자가 승인하면, 그때 마이페이지에서 분양비를 결제해요. 승인되지 않으면 결제할 일도 없어요.'],
     ['분양', '반려동물은 어떻게 받나요?', '동물보호법에 따라 택배로 보내지 않아요. 입양 신청서를 분양자가 검토한 뒤, 매장 방문 또는 전문 펫택시로 직접 만나 인계하고, 분양 계약서·건강 기록·먹던 사료 샘플을 함께 드려요.'],
     ['분양', '건강보증은 어떻게 되나요?', '인계 후 15일 이내에 질병이 생기면 판매자가 치료를 지원하고, 회복이 어렵거나 폐사하면 같은 종으로 교환 또는 환불해 드려요. 마이페이지 > 주문내역의 [건강보증 신청]에서 접수하세요.'],
     ['분양', '마음이 바뀌면 반품할 수 있나요?', '반려동물은 생명이라 단순 변심에 따른 반품·환불이 불가해요. 입양 전에 평균 수명, 다 자란 크기, 매달 드는 비용과 돌봄 시간을 꼭 확인해 주세요.'],
@@ -23,22 +24,87 @@
     ['2026-11-12', '쿠폰함·배송지 관리·반품 신청·재입고 알림 기능 오픈'],
     ['2026-11-01', '타임세일 쿠폰(SALE15) 매일 자정까지 진행'],
   ];
+  // 입양 후 첫 일주일 가이드 (분류별)
+  const GUIDE = {
+    dog: [['첫날', '켄넬이나 방석을 조용한 곳에 두고, 먹던 사료를 그대로 주세요. 손님 방문과 과한 스킨십은 잠시 미뤄요.'],
+      ['2~3일', '배변 장소를 정하고 성공하면 바로 칭찬해요. 이름을 자주 불러 익숙해지게 해주세요.'],
+      ['1주일', '동물병원에서 첫 검진을 받고 남은 접종 일정을 상담해요. 동물등록 보호자 변경은 30일 안에 해야 해요.'],
+      ['2주 이후', '접종이 끝나면 짧은 산책부터 시작해요. 사료를 바꿀 땐 7~10일에 걸쳐 조금씩 섞어주세요.']],
+    cat: [['첫날', '작은 방 하나에 화장실·밥·물·숨숨집을 두세요. 숨어 있어도 억지로 꺼내지 않아요.'],
+      ['2~3일', '숨어 있는 건 정상이에요. 화장실을 쓰는지, 밥을 먹는지만 조용히 확인해요.'],
+      ['1주일', '병원 검진과 접종 일정을 확인하고, 방묘창·방묘문을 꼭 점검해요.'],
+      ['2주 이후', '집 전체로 천천히 영역을 넓혀요. 사냥 놀이를 하루 2번, 10분씩 해주면 금방 친해져요.']],
+    small: [['첫날', '케이지를 세팅한 뒤 조용히 쉬게 해주세요. 손을 넣어 만지지 않아요.'],
+      ['2~3일', '간식으로 손 냄새를 익히게 해요. 햄스터·고슴도치는 밤에 활동하는 게 정상이에요.'],
+      ['1주일', '특수동물 진료가 가능한 병원을 미리 찾아두고 체중을 재요.'],
+      ['2주 이후', '토끼·기니피그는 건초를 무제한으로, 햄스터는 합사하지 않아요.']],
+    bird: [['첫날', '새장 덮개를 반쯤 덮어 안정시키고 큰 소리를 내지 않아요.'],
+      ['2~3일', '부드럽게 말을 걸어주고, 모이와 물을 먹는지 확인해요.'],
+      ['1주일', '조류 진료가 가능한 병원을 확인하고 날개·발 상태를 살펴요.'],
+      ['2주 이후', '손 길들이기는 천천히. 방 안 산책 때는 창문과 문을 꼭 닫아요.']],
+    fish: [['첫날', '봉지째 30분 이상 띄워 수온을 맞추고, 물을 조금씩 섞어요. 첫날은 먹이를 주지 않아요.'],
+      ['2~3일', '아주 적은 양만 급여하고 수질(암모니아·아질산)을 확인해요.'],
+      ['1주일', '1/4 정도 환수하고 이상 행동이 없는지 관찰해요.'],
+      ['2주 이후', '새 친구를 더할 땐 2주 뒤에 천천히, 따로 격리 후 합사해요.']],
+    reptile: [['첫날', '온도·습도가 맞춰진 사육장에 넣고 핸들링하지 않아요.'],
+      ['2~3일', '먹이를 거부해도 일주일 정도는 정상이에요. 은신처에 잘 있는지만 확인해요.'],
+      ['1주일', '첫 급여를 확인하고, 탈피 때는 습도를 높여주세요.'],
+      ['2주 이후', '핸들링은 짧게 시작해요. 먹이에 칼슘·비타민을 뿌려 주세요.']],
+    insect: [['첫날', '매트 습도를 확인하고 곤충 젤리를 넣어주세요.'],
+      ['2~3일', '젤리는 2~3일마다 새것으로 바꿔요.'],
+      ['1주일', '수컷끼리는 싸울 수 있어 따로 키워요.'],
+      ['2주 이후', '아이와 함께 관찰 일기를 써보세요. 겨울엔 실내 온도를 지켜주세요.']],
+  };
+  let guideCat = 'dog';
   const cats = ['전체', ...new Set(FAQ.map(f => f[0]))];
   let cat = '전체';
   let q = '';
 
   $('#app').innerHTML = `
-    <h1 class="page-title">고객센터</h1>
+    <h1 class="page-title">고객센터 · 입양 가이드</h1>
     <div class="help-grid">
       <div class="card"><span class="ico">📞</span><strong>전화 상담</strong><span class="muted">1588-0000 · 평일 09:00–18:00</span></div>
       <a class="card" href="mypage.html"><span class="ico">📦</span><strong>주문·배송 조회</strong><span class="muted">취소·반품 신청도 여기서 →</span></a>
       <a class="card" href="mypage.html?tab=qna"><span class="ico">💬</span><strong>내 문의 내역</strong><span class="muted">상품 문의 답변 확인 →</span></a>
     </div>
-    <section class="card">
+    <section class="card" id="guide">
+      <h2 class="sub-h" style="margin-top:0">📖 입양 후 첫 일주일 가이드</h2>
+      <p class="muted" style="margin-top:-4px">새 집은 아이에게 낯선 곳이에요. 천천히, 아이의 속도에 맞춰 주세요.</p>
+      <div class="chip-wrap" id="guideCats" style="margin-bottom:14px"></div>
+      <ol class="guide-steps" id="guideSteps"></ol>
+    </section>
+
+    <div class="help-two">
+      <section class="card">
+        <h2 class="sub-h" style="margin-top:0">📝 동물등록 · 펫보험</h2>
+        <ul class="habitat">
+          <li><b>동물등록:</b> 생후 2개월 이상 반려견은 등록이 의무예요(동물보호법). 몽글은 내장칩 등록을 마친 뒤 인계하고, 보호자 변경은 30일 안에 신고해요.</li>
+          <li><b>고양이:</b> 등록은 선택이지만 잃어버렸을 때 찾을 수 있도록 내장칩 등록을 권해요.</li>
+          <li><b>펫보험:</b> 슬개골·피부 질환·사고 보장 범위와 가입 가능 나이를 꼭 비교해 보세요. 어릴 때 가입할수록 유리해요.</li>
+        </ul>
+      </section>
+      <section class="card" id="return">
+        <h2 class="sub-h" style="margin-top:0">🤝 돌아오기 약속</h2>
+        <p style="margin:0 0 8px">살다 보면 함께하기 어려운 사정이 생길 수 있어요. 그럴 땐 <b>절대 버리지 말고 몽글로 돌아와 주세요.</b></p>
+        <ul class="habitat">
+          <li>비용 없이 아이를 다시 맡아 건강을 확인해요.</li>
+          <li>신청서와 만남을 거쳐 새 가족을 신중히 찾아드려요.</li>
+          <li>경제적 어려움이라면 사료·병원비 지원부터 함께 찾아봐요. (데모)</li>
+        </ul>
+        <a class="btn btn-sm btn-outline" href="mypage.html">마이페이지에서 상담 신청</a>
+      </section>
+    </div>
+
+    <section class="card" style="margin-top:16px">
       <div class="toolbar" style="flex-wrap:wrap;gap:10px"><h2 style="margin:0;font-size:20px">자주 묻는 질문</h2>
         <input class="input" id="faqQ" type="search" placeholder="궁금한 내용을 검색해 보세요" style="max-width:280px"></div>
       <div class="sort-tabs" id="faqCats" style="margin:14px 0 4px"></div>
       <div class="faq" id="faqList"></div>
+    </section>
+    <section class="card" style="margin-top:16px">
+      <h2 style="margin:0 0 10px;font-size:20px">🐕 보호소 입양도 함께 응원해요</h2>
+      <p style="margin:0 0 8px">전국 보호소에는 새 가족을 기다리는 아이들이 많아요. <a href="https://www.animal.go.kr" target="_blank" rel="noopener noreferrer" style="color:var(--forest);font-weight:700">국가동물보호정보시스템 ↗</a>에서 가까운 보호소 아이들을 만나보세요.</p>
+      <p class="muted" style="margin:0">몽글은 모든 분양비의 5%를 협력 보호소에 기부해요. (데모)</p>
     </section>
     <section class="card" style="margin-top:16px">
       <h2 style="margin:0 0 10px;font-size:20px">공지사항</h2>
@@ -54,6 +120,13 @@
       : '<p class="muted">검색 결과가 없어요. 전화 상담을 이용해 주세요.</p>';
     $$('[data-c]').forEach(b => b.addEventListener('click', () => { cat = b.dataset.c; paint(); }));
   }
+  function paintGuide() {
+    $('#guideCats').innerHTML = CATEGORIES.filter(c => GUIDE[c.id]).map(c => `<button type="button" class="f-chip ${c.id === guideCat ? 'on' : ''}" data-gc="${c.id}">${c.icon} ${c.name}</button>`).join('');
+    $('#guideSteps').innerHTML = GUIDE[guideCat].map(([when, text]) => `<li><b>${when}</b><span>${esc(text)}</span></li>`).join('');
+    $$('[data-gc]').forEach(b => b.addEventListener('click', () => { guideCat = b.dataset.gc; paintGuide(); }));
+  }
+  paintGuide();
   $('#faqQ').addEventListener('input', e => { q = e.target.value; paint(); });
   paint();
+  if (param('tab') === 'guide') setTimeout(() => $('#guide').scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
 })();

@@ -301,9 +301,9 @@
         <td style="font-size:12px">${esc(o.no)}</td>
         <td>${esc(it.name)}${it.option ? `<div class="muted" style="font-size:12px">${esc(it.option)}</div>` : ''}<div class="muted" style="font-size:12px">${it.qty}개</div></td>
         <td style="white-space:nowrap">${won(it.price * it.qty)}</td>
-        <td style="font-size:13px">${o.application && it.live ? `<div style="margin-bottom:4px"><b>💌 입양 신청서</b> ${esc(o.application.home)} · ${esc(o.application.experience)} · 혼자 ${esc(o.application.alone)}<div class="muted">“${esc(o.application.why)}”</div></div>` : ''}${esc(o.address.name)} ${esc(o.address.phone)}<div class="muted">[${esc(o.address.zip)}] ${esc(o.address.addr1)} ${esc(o.address.addr2)}</div><div class="muted">요청: ${esc(o.memo)}</div></td>
+        <td style="font-size:13px">${o.application && it.live ? `<div style="margin-bottom:4px"><b>💌 입양 신청서</b> ${esc(o.application.home)} · ${esc(o.application.experience)} · 혼자 ${esc(o.application.alone)}<div class="muted">“${esc(o.application.why)}”</div>${o.meeting ? `<div>👋 만남 희망: ${esc(o.meeting.type)} · ${esc(o.meeting.date)} ${esc(o.meeting.slot)}</div>` : ''}${o.adoption ? `<div>${o.paid ? '💳 분양비 결제 완료' : '⏳ 분양비: 승인 후 결제'}</div>` : ''}${it.rehome ? `<div style="color:var(--forest)">🤝 재입양 상담 신청: ${esc(it.rehome.reason)}</div>` : ''}</div>` : ''}${esc(o.address.name)} ${esc(o.address.phone)}<div class="muted">[${esc(o.address.zip)}] ${esc(o.address.addr1)} ${esc(o.address.addr2)}</div><div class="muted">요청: ${esc(o.memo)}</div></td>
         <td><span class="status s-${it.status}">${statusLabel(it.status, it.live)}</span>${it.tracking ? `<div class="muted" style="font-size:11px">송장 ${esc(it.tracking)}</div>` : ''}${it.returnReason ? `<div class="muted" style="font-size:11px">사유: ${esc(it.returnReason)}${it.returnDetail ? ' · ' + esc(it.returnDetail) : ''}</div>` : ''}</td>
-        ${withActions ? `<td>${NEXT[it.status] ? `<button class="btn btn-sm btn-primary" data-next="${esc(o.no)}" data-idx="${idx}" data-from="${it.status}">${it.live ? ({ 결제완료: '신청서 검토·승인', 배송준비중: '인계 출발', 배송중: '인계 완료', 반품요청: '건강보증 승인' })[it.status] : NEXT[it.status][1]}</button>` : '<span class="muted" style="font-size:12px">-</span>'}</td>` : ''}
+        ${withActions ? `<td>${NEXT[it.status] ? `<button class="btn btn-sm btn-primary" data-next="${esc(o.no)}" data-idx="${idx}" data-from="${it.status}" ${it.live && o.adoption && !o.paid && it.status === '배송준비중' ? 'disabled title="보호자가 분양비를 결제하면 인계할 수 있어요"' : ''}>${it.live ? ({ 결제완료: '만남 후 승인', 배송준비중: o.adoption && !o.paid ? '결제 대기 중' : '인계 출발', 배송중: '인계 완료', 반품요청: '건강보증 승인' })[it.status] : NEXT[it.status][1]}</button>${it.live && o.adoption && !o.paid && ['결제완료', '배송준비중'].includes(it.status) ? `<button class="btn btn-sm" data-decline="${esc(o.no)}" data-idx="${idx}" style="margin-top:4px">정중히 거절</button>` : ''}` : '<span class="muted" style="font-size:12px">-</span>'}</td>` : ''}
       </tr>`).join('')}</tbody></table></div>`;
   }
   function ordersHtml() {
@@ -317,6 +317,16 @@
   }
   function bindOrders() {
     $$('[data-filter]').forEach(b => b.addEventListener('click', () => { orderFilter = b.dataset.filter; render(); }));
+    $$('[data-decline]').forEach(b => b.addEventListener('click', () => modal({
+      title: '🌷 정중히 거절하기',
+      body: `<p style="margin-top:0">이 아이와는 맞지 않는 가족이라고 판단되었나요? 신청자에게 따뜻하게 이유를 전해주세요.</p>
+        <textarea class="input" id="dcText" rows="4" maxlength="300">아이의 활동량에 비해 혼자 있는 시간이 길 것 같아 이번에는 함께하기 어렵다고 판단했어요. 신청해 주셔서 정말 고마워요. 더 잘 맞는 친구와의 좋은 인연을 응원할게요.</textarea>`,
+      okText: '거절 메시지 보내기',
+      onOk: w => {
+        toast(Orders.decline(b.dataset.decline, Number(b.dataset.idx), $('#dcText', w).value.trim()) ? '신청자에게 메시지를 전했어요. 아이는 다시 가족을 기다려요.' : '이미 처리된 신청이에요.');
+        render();
+      },
+    })));
     $$('[data-next]').forEach(b => b.addEventListener('click', () => {
       const no = b.dataset.next, idx = Number(b.dataset.idx);
       const o = Orders.find(no);

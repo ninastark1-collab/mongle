@@ -21,6 +21,13 @@ const Store = {
   },
 };
 
+// 한국어 조사: 받침 있으면 a(이/을), 없으면 b(가/를)
+function josa(word, a, b) {
+  const w = String(word || '').trim();
+  const c = w.charCodeAt(w.length - 1);
+  if (c >= 0xac00 && c <= 0xd7a3) return w + ((c - 0xac00) % 28 ? a : b);
+  return w + a + '(' + b + ')'; // 한글이 아니면 둘 다 표기
+}
 function uid(prefix) {
   return prefix + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }
@@ -221,9 +228,21 @@ const Orders = {
           return;
         }
         if (it.sellerEmail || !STATUS_FLOW.slice(0, 3).includes(it.status)) return;
-        if (STATUS_FLOW.indexOf(auto) > STATUS_FLOW.indexOf(it.status)) {
-          it.status = auto;
-          if (auto === '배송중' && !it.tracking) it.tracking = 'MG' + String(Math.floor(Math.random() * 1e10)).padStart(10, '0');
+        let target = auto;
+        if (o.adoption && it.live) {
+          if (!o.paid) target = sec < 20 ? '결제완료' : '배송준비중'; // 만남·승인까지만
+          else {
+            const ps = (now - new Date(o.paidAt).getTime()) / 1000;
+            target = ps < 20 ? '배송준비중' : ps < 40 ? '배송중' : '배송완료';
+          }
+        }
+        if (STATUS_FLOW.indexOf(target) > STATUS_FLOW.indexOf(it.status)) {
+          const was = it.status;
+          it.status = target;
+          if (target === '배송중' && !it.tracking && !it.live) it.tracking = 'MG' + String(Math.floor(Math.random() * 1e10)).padStart(10, '0');
+          if (target === '배송완료') it.doneAt = new Date().toISOString();
+          if (o.adoption && it.live && was === '결제완료') Notify.push(o.userEmail, `💛 '${it.name.split(' · ')[0]}' 입양 신청이 승인되었어요! 만남 후 분양비를 결제하면 인계를 준비해요.`, 'mypage.html');
+          if (o.adoption && it.live && target === '배송완료') Notify.push(o.userEmail, `🏡 ${josa(it.name.split(' · ')[0], '이', '가')} 새 가족 품에 도착했어요. 첫 일주일 가이드를 확인해 주세요.`, 'help.html?tab=guide');
           changed = true;
         }
       });
@@ -246,7 +265,7 @@ const Orders = {
     all.unshift(order);
     this.saveAll(all);
     [...new Set(order.items.map(i => i.sellerEmail).filter(Boolean))].forEach(email =>
-      Notify.push(email, '🛒 새 주문이 들어왔어요! 발주확인을 해주세요.', 'seller.html?tab=orders'));
+      Notify.push(email, order.adoption ? '💌 새 입양 신청서가 도착했어요! 신청서를 읽고 만남 일정을 잡아주세요.' : '🛒 새 주문이 들어왔어요! 발주확인을 해주세요.', 'seller.html?tab=orders'));
   },
   // 주문 전체 상태 요약 (가장 늦게 진행 중인 상품 기준)
   status(o) {
@@ -285,7 +304,9 @@ const Orders = {
     const cur = STATUS_FLOW.indexOf(o.items[idx].status);
     const nxt = STATUS_FLOW.indexOf(status);
     if (cur < 0 || nxt !== cur + 1 || nxt > STATUS_FLOW.indexOf('배송완료')) return false;
+    if (o.adoption && o.items[idx].live && status === '배송중' && !o.paid) return false; // 분양비 결제 후 인계
     o.items[idx].status = status;
+    if (status === '배송완료') o.items[idx].doneAt = new Date().toISOString();
     if (tracking !== undefined) o.items[idx].tracking = tracking;
     this.saveAll(all);
     const link = 'order-complete.html?no=' + encodeURIComponent(no);
@@ -324,6 +345,47 @@ const Orders = {
     Catalog.adjustStock(it.id, it.qty);
     if (r.points) Auth.addPoints(o.userEmail, r.points);
     Notify.push(o.userEmail, `💸 반품이 완료되어 ${won(r.cash)} 환불${r.points ? ` · 적립금 ${r.points.toLocaleString()}P 반환` : ''}되었어요.`, 'order-complete.html?no=' + encodeURIComponent(o.no));
+  },
+  // ----- 입양: 승인 후 분양비 결제 -----
+  canPayAdoption(o) {
+    return !!(o && o.adoption && !o.paid && o.items.some(i => i.live && i.status === '배송준비중'));
+  },
+  payAdoption(no, method) {
+    const all = this.all();
+    const o = all.find(x => x.no === no);
+    if (!this.canPayAdoption(o)) return false;
+    o.paid = true;
+    o.paidAt = new Date().toISOString();
+    o.payMethod = method;
+    this.saveAll(all);
+    o.items.forEach(i => { if (i.sellerEmail) Notify.push(i.sellerEmail, `💳 '${i.name.split(' · ')[0]}' 분양비가 결제되었어요. 인계를 준비해 주세요.`, 'seller.html?tab=orders'); });
+    return true;
+  },
+  // 분양자가 정중히 거절 (결제 전만 가능)
+  decline(no, idx, message) {
+    const all = this.all();
+    const o = all.find(x => x.no === no);
+    const it = o && o.items[idx];
+    if (!it || !it.live || o.paid || !['결제완료', '배송준비중'].includes(it.status)) return false;
+    it.status = '주문취소';
+    it.declined = true;
+    it.declineMsg = String(message || '').slice(0, 300);
+    Catalog.adjustStock(it.id, it.qty);
+    this.saveAll(all);
+    Notify.push(o.userEmail, `🌷 '${it.name.split(' · ')[0]}' 입양 신청은 이번엔 함께하지 못하게 되었어요. 분양자의 메시지를 확인해 주세요.`, 'order-complete.html?no=' + encodeURIComponent(no));
+    return true;
+  },
+  // 돌아오기 약속: 함께하기 어려워졌을 때 재입양 상담
+  requestRehome(no, idx, reason, detail) {
+    const all = this.all();
+    const o = all.find(x => x.no === no);
+    const it = o && o.items[idx];
+    if (!it || !it.live || !['배송완료', '구매확정'].includes(it.status) || it.rehome) return false;
+    it.rehome = { reason, detail: String(detail || '').slice(0, 500), at: new Date().toISOString() };
+    this.saveAll(all);
+    Notify.push(o.userEmail, '🤝 재입양 상담이 접수되었어요. 몽글 상담 선생님이 1일 안에 연락드릴게요. 혼자 결정하지 않아 줘서 고마워요.', 'mypage.html');
+    if (it.sellerEmail) Notify.push(it.sellerEmail, `🤝 분양한 '${it.name.split(' · ')[0]}'의 보호자가 재입양 상담을 신청했어요.`, 'seller.html?tab=orders');
+    return true;
   },
   approveReturn(no, idx) {
     const all = this.all();
@@ -463,7 +525,7 @@ const Restock = {
     const p = Catalog.get(id);
     const list = this.all();
     list.filter(r => r.productId === Number(id)).forEach(r =>
-      Notify.push(r.email, `🔔 재입고! '${p ? p.name : '상품'}'을(를) 다시 구매할 수 있어요.`, 'product.html?id=' + id));
+      Notify.push(r.email, `🔔 재입고! ${josa(p ? p.name.split(' · ')[0] : '상품', '을', '를')} 다시 만날 수 있어요.`, 'product.html?id=' + id));
     Store.set('restock', list.filter(r => r.productId !== Number(id)));
   },
 };
@@ -508,4 +570,44 @@ const AddressBook = {
     this._sync(l, def);
   },
   setDefault(id) { this._sync(this.list(), id); },
+};
+
+
+// ---------- 입양 후 건강 캘린더 (첫 일주일 ~ 한 달, 다음 접종) ----------
+const CarePlan = {
+  forItem(o, it) {
+    const p = getProduct(it.id);
+    const base = new Date(it.doneAt || o.paidAt || o.date);
+    const day = n => { const d = new Date(base); d.setDate(d.getDate() + n); return d; };
+    const name = it.name.split(' · ')[0];
+    const plan = [
+      { key: 'd0', date: day(0), text: `🏡 ${josa(name, '이', '가')} 온 첫날: 조용한 공간과 먹던 사료로 편히 쉬게 해주세요.` },
+      { key: 'd3', date: day(3), text: '🍚 3일째: 밥·물·배변 상태를 확인해요. 사료는 아직 바꾸지 않아요.' },
+      { key: 'd7', date: day(7), text: '🏥 1주일: 가까운 동물병원에서 첫 건강검진을 받아요.' },
+      { key: 'd14', date: day(14), text: '🩺 15일 건강보증이 곧 끝나요. 이상이 있으면 지금 알려주세요.' },
+      { key: 'd30', date: day(30), text: '⚖️ 한 달: 체중을 재고 성장 기록을 남겨요.' },
+    ];
+    if (p && p.pet && p.pet.nextVaccine) {
+      const d = new Date(p.pet.nextVaccine.date);
+      plan.push({ key: 'vac', date: d < base ? day(7) : d, text: `💉 다음 예방접종: ${p.pet.nextVaccine.name}` });
+    }
+    if (p && p.category === 'dog') plan.push({ key: 'reg', date: day(30), text: '📝 동물등록 보호자 변경 (30일 이내, 동물보호법)' });
+    return plan.sort((a, b) => a.date - b.date);
+  },
+  // 기한이 된 일정은 알림함으로 보내기 (한 번씩만)
+  check() {
+    const u = Auth.current();
+    if (!u) return;
+    const sent = Store.get('careSent_' + u.email, []);
+    const now = new Date();
+    let changed = false;
+    Orders.mine().forEach(o => o.items.forEach((it, idx) => {
+      if (!it.live || !['배송완료', '구매확정'].includes(it.status)) return;
+      this.forItem(o, it).forEach(c => {
+        const k = o.no + ':' + idx + ':' + c.key;
+        if (c.date <= now && !sent.includes(k)) { Notify.push(u.email, c.text, 'mypage.html?tab=care'); sent.push(k); changed = true; }
+      });
+    }));
+    if (changed) Store.set('careSent_' + u.email, sent.slice(-300));
+  },
 };

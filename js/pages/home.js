@@ -5,6 +5,16 @@
   const best = live.slice().sort((a, b) => (b.sold || 0) * 50 + b.reviewCount - ((a.sold || 0) * 50 + a.reviewCount)).slice(0, 8);
   const easy = live.filter(p => p.pet && p.pet.care === '초보 추천').slice(0, 5);
   const babies = live.filter(p => p.isNew).slice(0, 10);
+  const adults = live.filter(p => p.pet && p.pet.adult);
+  // 새 가족을 만난 이야기: 실제 입양 후기 + 예시 이야기
+  const realStories = Reviews.all().map(r => ({ ...r, p: getProduct(r.productId) })).filter(r => r.p && r.p.live).slice(0, 3);
+  const sampleStories = [
+    [1, '보리네 가족', '처음엔 소파 밑에만 있던 아이가 이제는 퇴근하면 현관까지 마중 나와요. 매일이 선물 같아요.'],
+    [10, '두부랑 사는 집사', '조용한 성격이라 걱정했는데 밤마다 제 옆자리에 와서 자요. 몽글에서 미리 알려준 대로 천천히 기다렸어요.'],
+    [16, '솜이 언니', '건초를 오물오물 먹는 소리가 우리 집 배경음악이 됐어요. 첫 일주일 가이드가 정말 도움이 됐어요.'],
+    [57, '할아버지 골디의 새 가족', '노령견 입양이 망설여졌는데, 느긋한 산책이 오히려 저희 가족에게 쉼이 되어줘요.'],
+  ].map(([id, who, text]) => ({ p: getProduct(id), name: who, text, sample: true })).filter(x => x.p);
+  const stories = [...realStories.map(r => ({ p: r.p, name: r.name ? r.name[0] + '*' + (r.name.length > 2 ? r.name.slice(-1) : '') + ' 님' : '입양 가족', text: r.text, sample: false })), ...sampleStories].slice(0, 4);
   const fresh = PRODUCTS.filter(p => p.sellerEmail).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
   const recent = Recent.list().map(getProduct).filter(p => p && p.status !== 'hidden').slice(0, 5);
   const maxDeal = Math.max(0, ...supplies.map(p => p.discount));
@@ -47,6 +57,13 @@
         <div><div class="eyebrow">How adoption works</div><h3>입양은 이렇게<br>진행돼요</h3></div>
         <span class="arrow">→</span>
       </a>
+    </section>
+
+    <section class="section">
+      <div class="quiz-band">
+        <div><div class="eyebrow">Find your match</div><h2>어떤 친구가 우리 집과 잘 맞을까?</h2><p>사는 곳, 혼자 있는 시간, 산책 시간까지 6가지만 답해 주세요.</p></div>
+        <button class="btn btn-primary btn-lg" data-quiz>🧩 나와 꼭 맞는 친구 찾기</button>
+      </div>
     </section>
 
     <section class="section reveal">
@@ -103,6 +120,12 @@
       <div class="grid cols-5">${babies.map(p => productCard(p)).join('')}</div>
     </section>` : ''}
 
+    ${adults.length ? `
+    <section class="section">
+      <div class="section-head"><div><div class="eyebrow">Grown-up friends</div><h2>의젓한 어른 친구들도 기다려요 🧓</h2><p class="muted" style="margin:6px 0 0">성격이 이미 자리 잡아 우리 집과 잘 맞는지 알기 쉬워요. 사정이 생긴 보호자의 아이들이 다시 가족을 찾고 있어요.</p></div><a href="products.html?live=1&stage=adult">모두 보기</a></div>
+      <div class="grid">${adults.map(p => productCard(p)).join('')}</div>
+    </section>` : ''}
+
     <section class="section">
       <div class="section-head"><div><div class="eyebrow">First pet?</div><h2>처음 함께한다면, 이 친구들을 만나보세요 🌱</h2></div><a href="products.html?live=1&care=easy">더보기</a></div>
       <div class="grid cols-5">${easy.map(p => productCard(p)).join('')}</div>
@@ -125,6 +148,26 @@
       <div class="section-head"><div><div class="eyebrow">From caring breeders</div><h2>새로 가족을 찾는 친구들 ✨</h2></div><a href="products.html?sort=new">전체보기</a></div>
       <div class="grid cols-5">${fresh.map(p => productCard(p)).join('')}</div>
     </section>` : ''}
+
+    ${stories.length ? `
+    <section class="section">
+      <div class="section-head"><div><div class="eyebrow">Happy together</div><h2>새 가족을 만났어요 💛</h2></div><a href="help.html">입양 이야기 더 보기</a></div>
+      <div class="story-grid">${stories.map(st => `<a class="story" href="product.html?id=${st.p.id}">
+        <div class="story-img">${thumb({ ...st.p, soldOut: false })}</div>
+        <div class="story-body"><p>“${esc(st.text)}”</p><span>— ${esc(st.name)}${st.sample ? ' <em class="sample">예시 이야기</em>' : ''}</span></div></a>`).join('')}</div>
+    </section>` : ''}
+
+    <section class="section">
+      <div class="shelter">
+        <div><div class="eyebrow">Adopt, don't shop · 함께해요</div><h2>보호소 친구들도 가족을 기다려요 🐕</h2>
+          <p>몽글은 책임 분양과 함께 유기동물 입양을 응원해요. 새 가족을 찾고 있다면 보호소 친구들도 꼭 한 번 만나보세요.</p></div>
+        <div class="shelter-cards">
+          <a class="card" href="https://www.animal.go.kr" target="_blank" rel="noopener noreferrer"><span class="ico">🔎</span><strong>보호소 친구 찾아보기</strong><span class="muted">국가동물보호정보시스템에서 전국 보호소 아이들을 볼 수 있어요 ↗</span></a>
+          <div class="card"><span class="ico">💝</span><strong>분양비 5% 기부</strong><span class="muted">모든 분양비의 5%는 협력 보호소의 사료·치료비로 쓰여요. (데모)</span></div>
+          <div class="card"><span class="ico">🏠</span><strong>임시보호·봉사</strong><span class="muted">입양이 어렵다면 임시보호나 봉사도 아이들에게 큰 힘이 돼요.</span></div>
+        </div>
+      </div>
+    </section>
 
     <section class="section">
       <div class="cta-band">

@@ -17,7 +17,7 @@
   $('#app').innerHTML = `
     <div class="complete">
       ${isNew
-        ? (adopt ? `<div class="ico">💌</div><h1>입양 신청이 접수되었어요</h1><p>소중한 마음 고마워요. 분양자가 신청서를 정성껏 읽고 1일 안에 연락드릴게요.</p>` : `<div class="ico">🎉</div><h1>주문이 완료되었습니다!</h1>`)
+        ? (adopt ? `<div class="ico">💌</div><h1>입양 신청이 접수되었어요</h1><p>소중한 마음 고마워요. 분양자가 신청서를 정성껏 읽고 만남 일정을 확인해 1일 안에 연락드릴게요.<br><b>분양비는 만남 후 승인되면 결제해요.</b></p>` : `<div class="ico">🎉</div><h1>주문이 완료되었습니다!</h1>`)
         : `<h1 class="page-title">${adopt ? '입양 신청 상세' : '주문 상세'}</h1>`}
       <p class="muted">${fmtDate(o.date)} ${adopt ? "신청 · 신청번호" : "주문 · 주문번호"} <strong>${esc(o.no)}</strong></p>
       <div class="card">
@@ -42,9 +42,12 @@
           <tr><th>${adopt ? "보호자" : "받는 분"}</th><td>${esc(a.name)} (${esc(a.phone)})</td></tr>
           <tr><th>${adopt ? "주소" : "배송지"}</th><td>[${esc(a.zip)}] ${esc(a.addr1)} ${esc(a.addr2)}</td></tr>
           ${o.handover ? `<tr><th>인계 방법</th><td>🐾 ${esc(o.handover)}</td></tr>` : ''}
+          ${o.meeting ? `<tr><th>만남 예약</th><td>👋 ${esc(o.meeting.type)} · ${esc(o.meeting.date)} ${esc(o.meeting.slot)}</td></tr>` : ''}
+          ${o.adoption ? `<tr><th>분양비 결제</th><td>${o.paid ? `결제 완료 (${esc(o.payMethod)})` : Orders.status(o) === '주문취소' ? '결제 없이 마무리' : Orders.canPayAdoption(o) ? '<b style="color:var(--forest)">승인 완료!</b> 마이페이지에서 분양비를 결제해 주세요' : '만남 후 분양자가 승인하면 결제해요'}</td></tr>` : ''}
+          ${o.items.some(i => i.declined) ? `<tr><th>분양자 메시지</th><td>🌷 ${esc(o.items.find(i => i.declined).declineMsg)}</td></tr>` : ''}
           ${o.application ? `<tr><th>입양 신청서</th><td>${esc(o.application.home)} · ${esc(o.application.experience)} · 혼자 있는 시간 ${esc(o.application.alone)}<div class="muted" style="font-size:13px;margin-top:4px">“${esc(o.application.why)}”</div></td></tr>` : ''}
           <tr><th>요청사항</th><td>${esc(o.memo)}</td></tr>
-          <tr><th>결제수단</th><td>${esc(o.payMethod)}</td></tr>
+          ${o.adoption ? '' : `<tr><th>결제수단</th><td>${esc(o.payMethod)}</td></tr>`}
           <tr><th>${adopt ? "분양비·상품금액" : "상품금액"}</th><td>${won(t.subtotal)}</td></tr>
           ${t.couponDiscount ? `<tr><th>쿠폰할인</th><td>-${won(t.couponDiscount)} (${esc(o.coupon)})</td></tr>` : ''}
           ${t.pointsUsed ? `<tr><th>적립금 사용</th><td>-${won(t.pointsUsed)}</td></tr>` : ''}

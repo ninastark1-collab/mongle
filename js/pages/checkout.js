@@ -18,10 +18,14 @@
   let coupon = '';
   let points = 0;
   const myPoints = user.points || 0;
+  const pet = liveOnly ? lines[0].product : null;
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  const lastDay = new Date(Date.now() + 21 * 86400000).toISOString().slice(0, 10);
 
   $('#app').innerHTML = `
     <h1 class="page-title">${hasLive ? '💌 입양 신청서' : '주문/결제'}</h1>
-    ${hasLive ? '<p class="muted" style="margin:-12px 0 20px">아이에게 꼭 맞는 가족을 찾기 위해 몇 가지만 여쭤볼게요. 분양자가 신청서를 읽고 1일 안에 연락드려요.</p>' : ''}
+    ${hasLive ? `<div class="adopt-steps-bar"><span class="on">① 신청서</span><span>② 만남</span><span>③ 승인 후 분양비 결제</span><span>④ 인계</span></div>
+    <p class="muted" style="margin:0 0 20px">아이에게 꼭 맞는 가족을 찾기 위해 몇 가지만 여쭤볼게요. <b>지금은 결제하지 않아요.</b> 직접 만나보고 분양자가 승인한 뒤에 분양비를 결제해요.</p>` : ''}
     <div class="cart-layout">
       <div>
         <section class="card co-section">
@@ -58,13 +62,31 @@
           <div class="error-text" id="appErr"></div>
         </section>
 
+        <section class="card co-section adopt-form">
+          <h2>👋 먼저 만나보세요</h2>
+          <p class="muted" style="margin-top:-6px;font-size:14px">아이를 직접 만나 성격과 건강 상태를 확인한 뒤에 결정해요. 부모견·부모묘도 함께 볼 수 있어요.</p>
+          <div class="q"><span class="q-title">만남 방법 *</span>${radios('qMeet', ['몽글 하우스 방문', '화상 만남'])}</div>
+          <div class="row">
+            <div class="field"><label for="qDate">희망 날짜 *</label><input class="input" type="date" id="qDate" min="${tomorrow}" max="${lastDay}"></div>
+            <div class="field"><span class="q-title" style="display:block;font-weight:600;font-size:13px;margin-bottom:7px">시간대 *</span>${radios('qSlot', ['오전', '오후', '저녁'])}</div>
+          </div>
+          <div class="error-text" id="meetErr"></div>
+        </section>
+
+        ${pet && pet.pet && pet.pet.cost ? `<section class="card co-section">
+          <h2>💸 함께하는 데 드는 비용</h2>
+          <div class="cost-mini">한 달 약 <b>${feeText(pet.pet.cost.monthly)}</b> · ${pet.pet.adult ? '남은' : '평생'} 약 ${pet.pet.cost.years}년 동안 약 <b>${feeText(pet.pet.cost.lifetime)}</b></div>
+          <label class="check" style="font-size:14px;margin-top:10px"><input type="checkbox" id="costAgree"> [필수] 사료·병원비·보험 등 예상 비용을 확인했고, 꾸준히 책임질 수 있어요.</label>
+          <div class="error-text" id="costErr"></div>
+        </section>` : ''}
+
         <section class="card co-section">
           <h2>🤝 인계 방법</h2>
           <div class="pay-methods" style="grid-template-columns:repeat(2,1fr)">
             <label><input type="radio" name="handover" value="매장 방문 수령" checked>🏠<br>매장 방문 수령<br><span class="muted" style="font-size:12px">무료 · 상담 후 인계</span></label>
             <label><input type="radio" name="handover" value="펫택시 직접 인계">🚕<br>펫택시 직접 인계<br><span class="muted" style="font-size:12px">무료 (데모) · 위 주소로</span></label>
           </div>
-          <div class="live-note">생명은 동물보호법에 따라 <strong>택배로 보내지 않아요.</strong> 분양자가 신청서를 확인한 뒤 1일 안에 연락드리고, 직접 만나 아이를 안전하게 인계해요. (데모)</div>
+          <div class="live-note">생명은 동물보호법에 따라 <strong>택배로 보내지 않아요.</strong> 만남과 승인, 분양비 결제가 끝나면 직접 만나 아이를 안전하게 인계해요. (데모)</div>
         </section>
 
         <section class="card co-section">
@@ -74,7 +96,7 @@
               <li>아이의 평생을 책임지고, 어떤 이유로도 버리지 않을게요.</li>
               <li>아플 때는 병원에 데려가고, 매년 건강검진을 챙길게요.</li>
               <li>이사·결혼·출산 같은 변화가 있어도 함께할게요.</li>
-              <li>사정이 생기면 혼자 결정하지 않고 분양자와 먼저 상의할게요.</li>
+              <li>사정이 생기면 혼자 결정하지 않고 몽글과 먼저 상의할게요. (🤝 돌아오기 약속)</li>
             </ol>
             <label class="check" style="font-size:14px"><input type="checkbox" id="liveAgree"> [필수] 위 약속을 지키고, 분양 계약서(15일 건강보증, 단순 변심 반품 불가)를 확인했어요.</label>
           </div>
@@ -105,7 +127,7 @@
           <div class="muted" style="font-size:13px;margin-top:6px">보유 적립금 <strong>${won(myPoints)}</strong> · 구매확정 시 결제금액의 ${POINT_RATE * 100}%가 적립돼요.</div>
         </section>
 
-        <section class="card co-section">
+        <section class="card co-section ${liveOnly ? 'hidden' : ''}">
           <h2>${hasLive ? '분양비 결제 수단' : '결제 수단'}</h2>
           <div class="pay-methods">
             <label><input type="radio" name="pay" value="신용/체크카드" checked>💳<br>신용/체크카드</label>
@@ -118,10 +140,10 @@
       </div>
 
       <aside class="card summary">
-        <h3>${liveOnly ? '분양비' : '결제 금액'}</h3>
+        <h3>${liveOnly ? '분양비 안내' : '결제 금액'}</h3>
         <div id="sum"></div>
-        <label class="check" style="font-size:13px;margin-top:12px"><input type="checkbox" id="agree"> ${hasLive ? '신청 내용이 사실이며, 분양비 결제에 동의합니다 (필수)' : '주문 내용을 확인했으며 결제에 동의합니다 (필수)'}</label>
-        ${hasLive ? '<p class="muted" style="font-size:12px;margin:8px 0 0">분양이 어렵다고 판단되면 분양비는 전액 돌려드려요. (데모)</p>' : ''}
+        <label class="check" style="font-size:13px;margin-top:12px"><input type="checkbox" id="agree"> ${liveOnly ? '신청 내용이 사실임을 확인합니다 (필수)' : '주문 내용을 확인했으며 결제에 동의합니다 (필수)'}</label>
+        ${liveOnly ? '<p class="muted" style="font-size:12px;margin:8px 0 0">💡 지금은 결제하지 않아요. 만남 후 분양자가 승인하면 마이페이지에서 분양비를 결제해요.</p>' : ''}
         <div class="error-text" id="agreeErr"></div>
         <button class="btn btn-primary btn-lg btn-block" id="payBtn" style="margin-top:12px"></button>
       </aside>
@@ -138,9 +160,9 @@
       <div class="sum-row"><span>쿠폰할인</span><span style="color:var(--danger)">-${won(t.couponDiscount)}</span></div>
       <div class="sum-row"><span>적립금 사용</span><span style="color:var(--danger)">-${won(t.pointsUsed)}</span></div>
       <div class="sum-row"><span>배송비</span><span>${t.shipping ? '+' + won(t.shipping) : '무료'}</span></div>`}
-      <div class="sum-row total"><span>${liveOnly ? '결제할 분양비' : '최종 결제금액'}</span><span>${won(t.total)}</span></div>
+      <div class="sum-row total"><span>${liveOnly ? '승인 후 결제할 분양비' : '최종 결제금액'}</span><span>${liveOnly ? feeText(t.total) : won(t.total)}</span></div>
       ${liveOnly ? '' : `<div class="muted" style="font-size:13px;text-align:right">구매확정 시 ${won(Math.floor(lines.filter(l => !l.product.live).reduce((s, l) => s + l.product.price * l.qty, 0) * POINT_RATE))} 적립 예정</div>`}`;
-    $('#payBtn').textContent = hasLive ? `💌 입양 신청하기 · ${won(t.total)}` : `${won(t.total)} 결제하기`;
+    $('#payBtn').textContent = liveOnly ? '💌 입양 신청서 보내기' : hasLive ? `💌 입양 신청하기 · ${won(t.total)}` : `${won(t.total)} 결제하기`;
     return t;
   }
   renderSum();
@@ -234,13 +256,29 @@
       else if (application.why.length < 20) err.textContent = '입양하고 싶은 이유를 20자 이상 적어주세요.';
       if (err.textContent) { err.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
     }
+    let meeting = null;
+    if (hasLive) {
+      const pick = n => ($(`input[name=${n}]:checked`) || {}).value || '';
+      meeting = { type: pick('qMeet'), date: $('#qDate').value, slot: pick('qSlot') };
+      const me = $('#meetErr');
+      me.textContent = '';
+      if (!meeting.type || !meeting.date || !meeting.slot) me.textContent = '만남 방법과 희망 날짜, 시간대를 골라주세요.';
+      else if (meeting.date < tomorrow || meeting.date > lastDay) me.textContent = '희망 날짜는 내일부터 3주 안에서 골라주세요.';
+      if (me.textContent) { me.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+      if ($('#costAgree') && !$('#costAgree').checked) {
+        $('#costErr').textContent = '예상 비용을 확인했다는 데 체크해 주세요.';
+        $('#costErr').scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      if ($('#costErr')) $('#costErr').textContent = '';
+    }
     if (hasLive && !$('#liveAgree').checked) {
       $('#liveErr').textContent = '입양 약속에 동의해 주세요.';
       $('#liveErr').scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     if (!$('#agree').checked) {
-      $('#agreeErr').textContent = '결제 동의에 체크해 주세요.';
+      $('#agreeErr').textContent = liveOnly ? '신청 내용 확인에 체크해 주세요.' : '결제 동의에 체크해 주세요.';
       return;
     }
 
@@ -268,7 +306,7 @@
     const t = renderSum();
     const btn = $('#payBtn');
     btn.disabled = true;
-    btn.textContent = '결제 승인 중...';
+    btn.textContent = liveOnly ? '신청서를 보내는 중...' : '결제 승인 중...';
 
     setTimeout(() => {
       if ($('#saveAddr').checked || $('#defAddr').checked) {
@@ -289,7 +327,10 @@
         memo: $('#memo').value,
         handover: hasLive ? $('input[name=handover]:checked').value : '',
         application,
-        payMethod: $('input[name=pay]:checked').value,
+        meeting,
+        adoption: liveOnly,
+        paid: !liveOnly,
+        payMethod: liveOnly ? '승인 후 결제' : $('input[name=pay]:checked').value,
         coupon,
         totals: t,
       });

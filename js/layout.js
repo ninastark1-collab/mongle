@@ -80,6 +80,7 @@ function petCard(p) {
         <div class="adopt-fee"><span>분양비</span> ${feeText(p.price)}</div>
         <div class="tags">
           ${p.isNew && !p.soldOut ? '<span class="tag tag-new">🍼 새로 왔어요</span>' : ''}
+          ${p.pet && p.pet.adult && !p.soldOut ? '<span class="tag tag-adult">🧓 의젓한 어른 친구</span>' : ''}
           ${p.soldOut ? '<span class="tag tag-home">💛 가족을 찾았어요</span>' : '<span class="tag tag-wait">🏡 가족을 기다려요</span>'}
           <span class="tag tag-free">🩺 15일 건강보증</span>
         </div>
@@ -360,5 +361,78 @@ function renderFooter() {
   $('#toTop').addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
 }
 
+// ---------- 나와 꼭 맞는 친구 찾기 퀴즈 ----------
+const QUIZ = [
+  ['home', '어떤 집에서 살고 있나요?', ['아파트·빌라', '마당 있는 주택', '원룸·오피스텔']],
+  ['alone', '아이가 하루에 혼자 있을 시간은요?', ['4시간 이하', '4~8시간', '8시간 이상']],
+  ['exp', '반려동물을 키워본 적이 있나요?', ['처음이에요', '조금 키워봤어요', '경험이 많아요']],
+  ['kids', '어린아이와 함께 살고 있나요?', ['네', '아니요']],
+  ['shed', '털 날림이나 알레르기가 걱정되나요?', ['네, 걱정돼요', '괜찮아요']],
+  ['walk', '하루에 산책·놀이에 쓸 수 있는 시간은요?', ['30분 이하', '1시간 정도', '2시간 이상']],
+];
+function quizMatch(a) {
+  return Catalog.visible().filter(p => p.live && !p.soldOut && p.pet).map(p => {
+    const t = p.pet.traits || [];
+    let score = 0;
+    const why = [];
+    const care = p.pet.care;
+    if (a.exp === '처음이에요') score += care === '초보 추천' ? 2 : care === '보통' ? -1 : -4;
+    if (a.exp === '조금 키워봤어요') score += care === '경험자 추천' ? -1 : 1;
+    if (care === '초보 추천' && a.exp === '처음이에요') why.push('처음 키우기 좋아요');
+    if (a.home !== '마당 있는 주택') { if (t.includes('apt')) { score += 1; why.push('아파트에서도 좋아요'); } else score -= 2; }
+    if (a.alone !== '4시간 이하') { if (t.includes('alone')) { score += 2; why.push('혼자서도 잘 지내요'); } else score -= a.alone === '8시간 이상' ? 4 : 2; }
+    if (a.kids === '네') { if (t.includes('kids')) { score += 1; why.push('아이와 함께해도 좋아요'); } else score -= 2; }
+    if (a.shed === '네, 걱정돼요') { if (t.includes('lowshed')) { score += 2; why.push('털 날림이 적어요'); } else score -= 2; }
+    if (p.category === 'dog') {
+      const big = /대형|중형/.test(p.pet.size);
+      if (a.walk === '30분 이하') score -= big ? 4 : 2;
+      if (a.walk === '2시간 이상') { score += 2; why.push('활동적인 가족과 잘 맞아요'); }
+      if (a.home === '마당 있는 주택' && big) score += 1;
+    }
+    if (t.includes('quiet') && a.home === '원룸·오피스텔') { score += 1; why.push('조용한 편이에요'); }
+    return { p, score, why: why.slice(0, 3) };
+  }).sort((x, y) => y.score - x.score || x.p.price - y.p.price)
+    // 같은 분류는 최대 2마리까지만 → 다양한 친구를 추천
+    .filter(function (r) { this[r.p.category] = (this[r.p.category] || 0) + 1; return this[r.p.category] <= 2; }, {})
+    .slice(0, 4);
+}
+function openQuiz() {
+  let showing = false;
+  const w = modal({
+    title: '🧩 나와 꼭 맞는 친구 찾기',
+    body: `<p class="muted" style="margin-top:0;font-size:14px">6가지 질문에 답하면 우리 집 생활에 잘 맞는 친구를 추천해 드려요.</p>
+      ${QUIZ.map(([k, q, opts]) => `<div class="q quiz-q"><span class="q-title">${q}</span><div class="choice-row">${opts.map(o => `<label><input type="radio" name="qz_${k}" value="${o}"> ${o}</label>`).join('')}</div></div>`).join('')}
+      <div class="error-text" id="qzErr"></div><div id="qzResult"></div>`,
+    okText: '추천 받기',
+    cancelText: '닫기',
+    onOk: wrap => {
+      if (showing) return; // 결과를 본 뒤에는 닫기
+      const a = {};
+      for (const [k] of QUIZ) {
+        const c = $(`input[name=qz_${k}]:checked`, wrap);
+        if (!c) { $('#qzErr', wrap).textContent = '모든 질문에 답해 주세요.'; return false; }
+        a[k] = c.value;
+      }
+      const res = quizMatch(a);
+      $$('.quiz-q', wrap).forEach(el => el.classList.add('hidden'));
+      $('#qzErr', wrap).textContent = '';
+      $('#qzResult', wrap).innerHTML = `<h4 style="margin:0 0 10px">💛 이런 친구들이 잘 맞을 것 같아요</h4>` + res.map(({ p, why }) => `
+        <a class="quiz-pick" href="product.html?id=${p.id}">${thumb(p, 'sm')}<div><strong>${esc(p.name.split(' · ')[0])}</strong>
+          <div class="muted" style="font-size:12px">${esc(p.pet.age)} · ${esc(p.pet.care)}</div>
+          <div style="font-size:12px;color:var(--forest)">${why.map(esc).join(' · ') || '생활 패턴과 무난하게 잘 맞아요'}</div></div></a>`).join('') +
+        `<p class="muted" style="font-size:12px">결과는 참고용이에요. 꼭 직접 만나보고, 분양자와 상담한 뒤 결정해 주세요.</p>
+         <a class="btn btn-sm btn-outline" href="products.html?live=1">모든 친구 둘러보기</a>`;
+      $('[data-ok]', wrap).textContent = '닫기';
+      showing = true;
+      return false;
+    },
+  });
+  return w;
+}
+document.addEventListener('click', e => {
+  if (e.target.closest('[data-quiz]')) { e.preventDefault(); openQuiz(); }
+});
+
+try { CarePlan.check(); } catch (e) { /* 저장소 접근 불가 시 무시 */ }
 renderHeader();
 renderFooter();
