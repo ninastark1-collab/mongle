@@ -5,7 +5,7 @@
     return;
   }
   const hidden = p.status === 'hidden';
-  document.title = p.name + ' | HAUL.';
+  document.title = p.name + ' | PIKK.';
   if (!hidden) Recent.add(p.id);
   const cat = getCategory(p.category);
   const maxQty = Math.max(1, Math.min(99, p.stock));
@@ -48,11 +48,12 @@
         <div class="tags">
           ${p.fast ? '<span class="tag tag-fast">🚀 내일도착</span>' : ''}
           ${p.freeShip ? '<span class="tag tag-free">무료배송</span>' : ''}
-          ${p.sellerEmail ? `<span class="tag tag-seller">${esc(p.seller)}</span>` : '<span class="tag tag-seller">✔ HAUL. 직영</span>'}
+          ${p.sellerEmail ? `<span class="tag tag-seller">${esc(p.seller)}</span>` : '<span class="tag tag-seller">✔ PIKK. 직영</span>'}
         </div>
         <h1>${esc(p.name)}</h1>
         <div class="rating">${p.reviewCount ? `${stars(p.avgRating)} <strong>${p.avgRating}</strong> · <a href="#" id="toReviews">리뷰 ${p.reviewCount.toLocaleString()}개</a>` : '아직 리뷰가 없어요'}${p.sold ? ` · ${p.sold.toLocaleString()}개 구매` : ''}</div>
         <div style="margin-top:14px">${priceBlock(p)}</div>
+        ${!p.soldOut && !hidden ? `<div class="coupon-hint" id="couponHint"></div>` : ''}
 
         <dl class="ship-box">
           <dt>배송</dt><dd>${p.fast ? `<strong style="color:var(--accent)">내일 ${arriveText} 도착 보장</strong> (밤 12시 전 주문 시)` : `${arriveText} 도착 예정`}</dd>
@@ -75,7 +76,8 @@
         <div class="actions">
           <button class="btn" id="wish" aria-label="찜하기" aria-pressed="${Wish.has(p.id)}">${Wish.has(p.id) ? '❤️' : '🤍'}</button>
           ${p.soldOut || hidden
-            ? `<button class="btn btn-lg" disabled style="grid-column:span 2">${hidden ? '판매 중지' : '일시품절'}</button>`
+            ? (hidden ? `<button class="btn btn-lg" disabled style="grid-column:span 2">판매 중지</button>`
+              : `<button class="btn btn-primary btn-lg" id="restock" style="grid-column:span 2"></button>`)
             : `<button class="btn btn-outline btn-lg" id="addCart">장바구니 담기</button>
                <button class="btn btn-primary btn-lg" id="buyNow">바로구매</button>`}
         </div>
@@ -95,7 +97,7 @@
         <div style="max-width:420px;margin:20px auto">${thumb({ ...p, soldOut: false })}</div>
         <table class="info-table">
           <tr><th>카테고리</th><td>${cat.name}</td></tr>
-          <tr><th>상품번호</th><td>HL-${String(p.id).padStart(6, '0')}</td></tr>
+          <tr><th>상품번호</th><td>PK-${String(p.id).padStart(6, '0')}</td></tr>
           <tr><th>판매자</th><td>${esc(p.seller)}</td></tr>
           ${p.options.length ? `<tr><th>옵션</th><td>${p.options.map(esc).join(', ')}</td></tr>` : ''}
         </table>
@@ -214,6 +216,51 @@
       Store.set('checkout', { source: 'now', items: [{ key: p.id + '|' + opt, id: p.id, option: opt, qty: getQty() }] });
       location.href = Auth.current() ? 'checkout.html' : 'login.html?redirect=checkout.html';
     });
+  }
+
+  // ---------- 재입고 알림 (품절 상품) ----------
+  const rs = $('#restock');
+  if (rs) {
+    const paintRs = () => {
+      const u = Auth.current();
+      const on = u && Restock.has(p.id, u.email);
+      rs.textContent = on ? '🔔 재입고 알림 신청됨 (취소하려면 클릭)' : '🔔 재입고 알림 신청';
+      rs.classList.toggle('btn-primary', !on);
+    };
+    rs.addEventListener('click', () => {
+      const u = Auth.current();
+      if (!u) { toast('로그인 후 재입고 알림을 신청할 수 있어요.', loginUrl(), '로그인'); return; }
+      toast(Restock.toggle(p.id, u.email) ? '재입고되면 알림함으로 바로 알려드릴게요!' : '재입고 알림을 취소했어요.');
+      paintRs();
+    });
+    paintRs();
+  }
+
+  // ---------- 이 상품에 쓸 수 있는 쿠폰 ----------
+  const hint = $('#couponHint');
+  if (hint) {
+    const paintHint = () => {
+      const lines = [{ product: p, qty: 1 }];
+      // 이미 사용한 쿠폰은 제외하고, 받을 수 있거나 보유 중인 쿠폰 중 최대 할인
+      const spent = c => Auth.current() && CouponBox.has(c) && !CouponBox.usable().some(x => x.code === c);
+      const usable = Object.keys(COUPONS).filter(c => p.price >= COUPONS[c].min && !spent(c));
+      if (!usable.length) { hint.innerHTML = ''; return; }
+      const best = usable.reduce((a, c) => (calcTotals(lines, c).couponDiscount > calcTotals(lines, a).couponDiscount ? c : a));
+      const off = calcTotals(lines, best).couponDiscount;
+      const u = Auth.current();
+      const owned = u && CouponBox.has(best);
+      hint.innerHTML = `<div class="free-hint" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+        <span>🎟️ 쿠폰 적용 시 <b style="color:var(--hot);font-size:16px">${won(p.price - off)}</b> <span class="muted">(${esc(COUPONS[best].label)})</span></span>
+        ${owned ? '<span style="font-weight:700">✓ 보유 중</span>' : `<button class="btn btn-sm btn-primary" data-get="${best}">쿠폰 받기</button>`}</div>`;
+      const g = $('[data-get]', hint);
+      if (g) g.addEventListener('click', () => {
+        const r = CouponBox.give(best);
+        if (r === 'login') { toast('로그인하고 쿠폰을 받아보세요.', loginUrl(), '로그인'); return; }
+        toast(r === 'ok' ? '쿠폰을 받았어요! 결제할 때 자동으로 적용돼요.' : '이미 받은(사용한) 쿠폰이에요.');
+        paintHint();
+      });
+    };
+    paintHint();
   }
 
   $('#wish').addEventListener('click', e => {

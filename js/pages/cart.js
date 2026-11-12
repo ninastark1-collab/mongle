@@ -74,7 +74,8 @@
           <div class="sum-row"><span>상품금액</span><span>${won(t.originTotal)}</span></div>
           <div class="sum-row"><span>할인금액</span><span style="color:var(--danger)">-${won(t.saved)}</span></div>
           <div class="sum-row"><span>배송비</span><span>${t.shipping ? '+' + won(t.shipping) : '무료'}</span></div>
-          ${t.shipping && remain > 0 ? `<div class="free-hint">${won(remain)} 더 담으면 <strong>무료배송</strong>!</div>` : ''}
+          ${t.shipping && remain > 0 ? `<div class="free-hint">${won(remain)} 더 담으면 <strong>무료배송</strong>!<div class="ship-progress"><div style="width:${Math.min(100, Math.round(t.subtotal / FREE_SHIPPING_MIN * 100))}%"></div></div></div>` : ''}
+          ${checked.length && Auth.current() && CouponBox.usable().length ? `<div class="muted" style="font-size:13px">🎟️ 보유 쿠폰 ${CouponBox.usable().length}장 · 결제 단계에서 자동 적용돼요</div>` : ''}
           <div class="sum-row total"><span>총 결제금액</span><span>${won(t.total)}</span></div>
           <button class="btn btn-primary btn-lg btn-block" id="order" style="margin-top:14px" ${checked.length ? '' : 'disabled'}>
             ${checked.length ? `${checked.length}개 상품 주문하기` : '상품을 선택하세요'}

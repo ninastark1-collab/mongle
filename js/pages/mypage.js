@@ -1,16 +1,17 @@
 (function () {
   if (!Auth.require()) return;
-  const TABS = [['orders', '주문내역'], ['wish', '찜한 상품'], ['recent', '최근 본 상품'], ['qna', '내 문의'], ['profile', '회원정보']];
+  const TABS = [['orders', '주문내역'], ['coupons', '쿠폰함'], ['wish', '찜한 상품'], ['recent', '최근 본 상품'], ['address', '배송지 관리'], ['qna', '내 문의'], ['profile', '회원정보']];
   let tab = TABS.some(t => t[0] === param('tab')) ? param('tab') : 'orders';
   let orderFilter = '전체';
 
   function ordersHtml() {
     const all = Orders.mine();
-    const filters = ['전체', '배송중', '배송완료', '구매확정', '주문취소'];
+    const filters = ['전체', '배송중', '배송완료', '구매확정', '취소/반품'];
     const match = (o, f) => {
       const s = Orders.status(o);
       if (f === '전체') return true;
       if (f === '배송중') return ['결제완료', '배송준비중', '배송중'].includes(s);
+      if (f === '취소/반품') return o.items.some(i => ['주문취소', '반품요청', '반품완료'].includes(i.status));
       return s === f;
     };
     const orders = all.filter(o => match(o, orderFilter));
@@ -29,10 +30,12 @@
           const p = getProduct(i.id);
           return `<div class="co-item">${p ? `<a href="product.html?id=${p.id}">${thumb(p, 'sm')}</a>` : '<div class="thumb sm" style="background:var(--bg)"><span class="emoji">📦</span></div>'}
             <div><div>${esc(i.name)}</div><div class="muted" style="font-size:13px">${i.option ? esc(i.option) + ' · ' : ''}${i.qty}개 · ${won(i.price * i.qty)}</div>
-              ${i.tracking && i.status !== '주문취소' ? `<div class="muted" style="font-size:12px">🚚 송장 ${esc(i.tracking)}</div>` : ''}</div>
+              ${i.tracking && i.status !== '주문취소' ? `<div class="muted" style="font-size:12px">🚚 송장 ${esc(i.tracking)}</div>` : ''}
+              ${i.status === '반품요청' ? `<div class="muted" style="font-size:12px">↩️ 반품 사유: ${esc(i.returnReason)} · ${i.sellerEmail ? '판매자 확인 중' : '곧 자동 승인돼요 (데모)'}</div>` : ''}
+              ${i.refund ? `<div class="muted" style="font-size:12px">💸 환불 ${won(i.refund.cash)}${i.refund.points ? ` + ${i.refund.points.toLocaleString()}P` : ''}${i.refund.fee ? ` (반품배송비 ${won(i.refund.fee)} 차감)` : ''}</div>` : ''}</div>
             <div style="text-align:right"><span class="status s-${i.status}">${i.status}</span>
               <div class="item-actions">
-                ${i.status === '배송완료' ? `<button class="btn btn-sm btn-primary" data-confirm="${esc(o.no)}" data-idx="${idx}">구매확정</button>` : ''}
+                ${i.status === '배송완료' ? `<button class="btn btn-sm btn-primary" data-confirm="${esc(o.no)}" data-idx="${idx}">구매확정</button><button class="btn btn-sm" data-return="${esc(o.no)}" data-idx="${idx}">반품신청</button>` : ''}
                 ${['배송완료', '구매확정'].includes(i.status) && !i.reviewed && p ? `<button class="btn btn-sm btn-outline" data-review="${esc(o.no)}" data-idx="${idx}">리뷰쓰기</button>` : ''}
                 ${i.reviewed ? '<span class="muted" style="font-size:12px">리뷰 작성완료</span>' : ''}
                 ${['배송완료', '구매확정'].includes(i.status) && p && p.status !== 'hidden' && !p.soldOut ? `<button class="btn btn-sm" data-rebuy="${i.id}" data-opt="${esc(i.option)}">재구매</button>` : ''}
@@ -53,6 +56,59 @@
   function gridOrEmpty(ids, emptyMsg, extra = '') {
     const list = ids.map(getProduct).filter(p => p && p.status !== 'hidden');
     return list.length ? extra + `<div class="grid">${list.map(productCard).join('')}</div>` : `<div class="empty"><div class="ico">🛍️</div><p>${emptyMsg}</p><a class="btn btn-primary" href="index.html">상품 둘러보기</a></div>`;
+  }
+
+  function couponsHtml() {
+    const mine = CouponBox.list();
+    const notOwned = Object.keys(COUPONS).filter(c => !CouponBox.has(c));
+    return `${notOwned.length ? `<div class="free-hint">받을 수 있는 쿠폰이 ${notOwned.length}장 더 있어요! <a href="index.html" style="font-weight:700;text-decoration:underline">홈 쿠폰존 가기 →</a></div>` : ''}
+      <div class="coupon-list">${mine.map(c => {
+        const d = COUPONS[c.code];
+        return `<div class="coupon ${c.used ? 'used' : ''}"><div class="c-val">${d.short}</div><div class="c-body"><strong>${esc(d.label)}</strong>
+          <span class="muted">코드 ${esc(c.code)} · ${fmtDate(c.at)} 받음</span>
+          <span style="font-weight:700;color:${c.used ? 'var(--muted)' : 'var(--forest)'}">${c.used ? '사용 완료' : '사용 가능'}</span></div></div>`;
+      }).join('') || '<p class="muted">쿠폰이 없어요.</p>'}</div>
+      <div class="coupon-row" style="margin-top:18px;max-width:420px"><input class="input" id="regCode" placeholder="쿠폰 코드 입력"><button class="btn" id="regBtn">등록</button></div>
+      <p class="muted" style="font-size:13px">쿠폰은 주문 1건에 1장 사용할 수 있고, 주문을 취소하면 다시 돌려받아요.</p>`;
+  }
+
+  function addressHtml() {
+    const list = AddressBook.list();
+    const def = AddressBook.defaultId();
+    return `${list.length ? list.map(a => `<div class="addr-card ${a.id === def ? 'default' : ''}">
+        <div><strong>${esc(a.name)}</strong> ${a.id === def ? '<span class="chip on">기본 배송지</span>' : ''}<div class="muted" style="font-size:13px">${esc(a.phone)}</div>
+          <div style="font-size:14px;margin-top:4px">[${esc(a.zip)}] ${esc(a.addr1)} ${esc(a.addr2)}</div></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
+          ${a.id === def ? '' : `<button class="btn btn-sm" data-defaddr="${esc(a.id)}">기본으로</button>`}
+          <button class="btn btn-sm" data-editaddr="${esc(a.id)}">수정</button>
+          <button class="btn btn-sm" data-deladdr="${esc(a.id)}">삭제</button>
+        </div></div>`).join('') : '<div class="empty"><div class="ico">🏠</div><p>저장된 배송지가 없어요.</p></div>'}
+      <button class="btn btn-primary" id="addAddr" ${list.length >= 10 ? 'disabled' : ''}>+ 배송지 추가 (${list.length}/10)</button>`;
+  }
+
+  function openAddress(a) {
+    const v = a || { name: Auth.current().name, phone: Auth.current().phone, zip: '', addr1: '', addr2: '' };
+    modal({
+      title: a ? '배송지 수정' : '배송지 추가',
+      body: `<div class="row"><div class="field"><label for="aName">받는 분</label><input class="input" id="aName" value="${esc(v.name)}"></div>
+          <div class="field"><label for="aPhone">연락처</label><input class="input" id="aPhone" type="tel" value="${esc(v.phone)}"></div></div>
+        <div class="field"><label for="aZip">우편번호</label><input class="input" id="aZip" maxlength="5" inputmode="numeric" value="${esc(v.zip)}"></div>
+        <div class="field"><label for="aAddr1">기본 주소</label><input class="input" id="aAddr1" value="${esc(v.addr1)}"></div>
+        <div class="field"><label for="aAddr2">상세 주소</label><input class="input" id="aAddr2" value="${esc(v.addr2)}"></div>
+        <label class="check" style="font-size:14px"><input type="checkbox" id="aDef" ${a && a.id === AddressBook.defaultId() ? 'checked disabled' : ''}> 기본 배송지로 설정</label>
+        <div class="error-text" id="aErr"></div>`,
+      okText: '저장',
+      onOk: w => {
+        const f = { id: a && a.id, name: $('#aName', w).value.trim(), phone: $('#aPhone', w).value.trim(), zip: $('#aZip', w).value.trim(), addr1: $('#aAddr1', w).value.trim(), addr2: $('#aAddr2', w).value.trim() };
+        if (!f.name || !/^0\d{1,2}-?\d{3,4}-?\d{4}$/.test(f.phone) || !/^\d{5}$/.test(f.zip) || !f.addr1 || !f.addr2) {
+          $('#aErr', w).textContent = '받는 분, 연락처(예: 010-1234-5678), 우편번호 5자리, 주소를 모두 입력해 주세요.';
+          return false;
+        }
+        AddressBook.save(f, $('#aDef', w).checked);
+        toast('배송지를 저장했어요.');
+        render();
+      },
+    });
   }
 
   function qnaHtml() {
@@ -93,6 +149,8 @@
       wish: () => gridOrEmpty(Wish.list(), '찜한 상품이 없어요.'),
       recent: () => gridOrEmpty(Recent.list(), '최근 본 상품이 없어요.', Recent.list().length ? '<div style="text-align:right;margin-bottom:10px"><button class="link-btn" id="clearRecent">전체 삭제</button></div>' : ''),
       qna: qnaHtml,
+      coupons: couponsHtml,
+      address: addressHtml,
       profile: profileHtml,
     }[tab]();
 
@@ -101,7 +159,7 @@
         <aside class="card my-menu">
           <div class="profile"><strong>${esc(u.name)}</strong>님
             <div class="muted" style="font-size:13px">적립금 <b style="color:var(--primary)">${won(u.points)}</b></div>
-            <div class="muted" style="font-size:13px">주문 ${orders.length}건 · 찜 ${Wish.list().length}개</div>
+            <div class="muted" style="font-size:13px">주문 ${orders.length}건 · 찜 ${Wish.list().length}개 · 쿠폰 ${CouponBox.usable().length}장</div>
             ${toConfirm ? `<div class="free-hint" style="margin-bottom:0">구매확정 대기 ${toConfirm}건</div>` : ''}
           </div>
           ${TABS.map(([k, v]) => `<button data-tab="${k}" class="${k === tab ? 'active' : ''}">${v}</button>`).join('')}
@@ -142,6 +200,22 @@
       },
     })));
     $$('[data-review]').forEach(b => b.addEventListener('click', () => openReview(b.dataset.review, Number(b.dataset.idx))));
+    $$('[data-return]').forEach(b => b.addEventListener('click', () => openReturn(b.dataset.return, Number(b.dataset.idx))));
+    const reg = $('#regBtn');
+    if (reg) reg.addEventListener('click', () => {
+      const code = $('#regCode').value.trim().toUpperCase();
+      const r = CouponBox.give(code);
+      toast(r === 'ok' ? '쿠폰을 등록했어요!' : r === 'dup' ? '이미 등록된 쿠폰이에요.' : '존재하지 않는 쿠폰 코드예요.');
+      if (r === 'ok') render();
+    });
+    $$('[data-defaddr]').forEach(b => b.addEventListener('click', () => { AddressBook.setDefault(b.dataset.defaddr); toast('기본 배송지를 변경했어요.'); render(); }));
+    $$('[data-editaddr]').forEach(b => b.addEventListener('click', () => openAddress(AddressBook.list().find(a => a.id === b.dataset.editaddr))));
+    $$('[data-deladdr]').forEach(b => b.addEventListener('click', () => modal({
+      title: '배송지 삭제', body: '<p>이 배송지를 삭제할까요?</p>', okText: '삭제',
+      onOk: () => { AddressBook.remove(b.dataset.deladdr); toast('배송지를 삭제했어요.'); render(); },
+    })));
+    const add = $('#addAddr');
+    if (add) add.addEventListener('click', () => openAddress(null));
     $$('[data-rebuy]').forEach(b => b.addEventListener('click', () => {
       if (Cart.add(Number(b.dataset.rebuy), b.dataset.opt, 1)) toast('장바구니에 담았어요.', 'cart.html', '장바구니 보기');
       else toast('지금은 구매할 수 없는 상품이에요.');
@@ -169,6 +243,30 @@
         catch (ex) { err.textContent = ex.message; return false; }
       },
     }));
+  }
+
+  function openReturn(no, idx) {
+    const o = Orders.find(no);
+    const it = o.items[idx];
+    const preview = reason => {
+      const r = Orders.refundFor(o, { ...it, returnReason: reason });
+      return `예상 환불액 <b>${won(r.cash)}</b>${r.points ? ` + 적립금 ${r.points.toLocaleString()}P` : ''}${r.fee ? `<br><span class="muted">단순 변심은 왕복 배송비 ${won(r.fee)}이 차감돼요.</span>` : ''}`;
+    };
+    const w = modal({
+      title: '반품 신청',
+      body: `<p style="margin-top:0"><b>${esc(it.name)}</b> · ${it.qty}개</p>
+        <div class="field"><label for="rtReason">반품 사유</label><select class="select" id="rtReason">${RETURN_REASONS.map(r => `<option>${r}</option>`).join('')}</select></div>
+        <textarea class="input" id="rtText" rows="3" maxlength="300" placeholder="자세한 내용을 적어주세요 (선택)"></textarea>
+        <div class="free-hint" id="rtPreview">${preview(RETURN_REASONS[0])}</div>
+        <p class="muted" style="font-size:12px;margin:0">수거 기사님이 1~2일 안에 방문해요. 판매자가 확인하면 결제 수단으로 환불됩니다. (데모)</p>`,
+      okText: '반품 신청',
+      onOk: wrap => {
+        if (Orders.requestReturn(no, idx, $('#rtReason', wrap).value, $('#rtText', wrap).value.trim())) toast('반품 신청이 접수되었어요.');
+        else toast('반품 신청할 수 없는 상태예요.');
+        render();
+      },
+    });
+    $('#rtReason', w).addEventListener('change', e => { $('#rtPreview', w).innerHTML = preview(e.target.value); });
   }
 
   function openReview(no, idx) {
@@ -209,6 +307,6 @@
   render();
   // 진행 중 주문이 있으면 상태 자동 갱신 (직영 상품 데모 배송)
   setInterval(() => {
-    if (tab === 'orders' && !$('.modal-wrap') && Orders.mine().some(o => o.items.some(i => !i.sellerEmail && ['결제완료', '배송준비중', '배송중'].includes(i.status)))) render();
+    if (tab === 'orders' && !$('.modal-wrap') && Orders.mine().some(o => o.items.some(i => !i.sellerEmail && ['결제완료', '배송준비중', '배송중', '반품요청'].includes(i.status)))) { render(); renderHeader(); }
   }, 10000);
 })();

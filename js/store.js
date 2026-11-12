@@ -73,13 +73,19 @@ const Catalog = {
   bySeller(email) { return this.all().filter(p => p.sellerEmail === email); },
 
   save(product) {
+    const prev = this.get(product.id);
     const list = this.custom();
     const i = list.findIndex(p => p.id === product.id);
     if (i >= 0) list[i] = { ...list[i], ...product };
     else list.push(product);
     const ok = Store.set('products', list);
     this.invalidate();
+    this._checkRestock(product.id, prev);
     return ok;
+  },
+  _checkRestock(id, prev) {
+    const now = this.get(id);
+    if (prev && prev.stock <= 0 && now && now.stock > 0) Restock.fire(id);
   },
   nextId() {
     return Math.max(1000, ...this.custom().map(p => p.id)) + 1;
@@ -89,10 +95,12 @@ const Catalog = {
     if (this.custom().some(p => p.id === id)) {
       this.save({ id, ...patch });
     } else {
+      const prev = this.get(id);
       const ov = this.overrides();
       ov[id] = { ...(ov[id] || {}), ...patch };
       Store.set('overrides', ov);
       this.invalidate();
+      this._checkRestock(id, prev);
     }
   },
   adjustStock(id, delta) {
@@ -182,13 +190,17 @@ const QnA = {
     Store.set('qna', all);
   },
   answer(id, text) {
-    Store.set('qna', this.all().map(q => (q.id === id ? { ...q, answer: text, answerDate: new Date().toISOString() } : q)));
+    const q = this.all().find(x => x.id === id);
+    Store.set('qna', this.all().map(x => (x.id === id ? { ...x, answer: text, answerDate: new Date().toISOString() } : x)));
+    if (q) Notify.push(q.email, '💬 문의하신 상품에 판매자 답변이 달렸어요.', 'product.html?id=' + q.productId + '&tab=qna');
   },
 };
 
 // ---------- 주문 ----------
 const STATUS_FLOW = ['결제완료', '배송준비중', '배송중', '배송완료', '구매확정'];
 const CANCELLABLE = ['결제완료', '배송준비중'];
+const RETURN_REASONS = ['단순 변심', '상품 불량/파손', '오배송', '상품 정보와 다름', '기타'];
+const RETURN_FEE = 6000; // 단순 변심 반품 왕복 배송비 (고객 부담)
 
 const Orders = {
   // 직영 상품은 데모를 위해 시간 경과에 따라 자동 배송 처리 (20초/40초/60초)
@@ -199,10 +211,16 @@ const Orders = {
       const sec = (now - new Date(o.date).getTime()) / 1000;
       const auto = sec < 20 ? '결제완료' : sec < 40 ? '배송준비중' : sec < 60 ? '배송중' : '배송완료';
       o.items.forEach(it => {
+        // 직영 상품 반품은 15초 뒤 자동 승인 (데모)
+        if (!it.sellerEmail && it.status === '반품요청' && now - new Date(it.returnAt).getTime() > 15000) {
+          this._applyReturn(o, it);
+          changed = true;
+          return;
+        }
         if (it.sellerEmail || !STATUS_FLOW.slice(0, 3).includes(it.status)) return;
         if (STATUS_FLOW.indexOf(auto) > STATUS_FLOW.indexOf(it.status)) {
           it.status = auto;
-          if (auto === '배송중' && !it.tracking) it.tracking = 'HL' + String(Math.floor(Math.random() * 1e10)).padStart(10, '0');
+          if (auto === '배송중' && !it.tracking) it.tracking = 'PK' + String(Math.floor(Math.random() * 1e10)).padStart(10, '0');
           changed = true;
         }
       });
@@ -224,11 +242,17 @@ const Orders = {
     const all = Store.get('orders', []);
     all.unshift(order);
     this.saveAll(all);
+    [...new Set(order.items.map(i => i.sellerEmail).filter(Boolean))].forEach(email =>
+      Notify.push(email, '🛒 새 주문이 들어왔어요! 발주확인을 해주세요.', 'seller.html?tab=orders'));
   },
   // 주문 전체 상태 요약 (가장 늦게 진행 중인 상품 기준)
   status(o) {
-    const live = o.items.filter(i => i.status !== '주문취소');
-    if (!live.length) return '주문취소';
+    const live = o.items.filter(i => STATUS_FLOW.includes(i.status));
+    if (!live.length) {
+      if (o.items.some(i => i.status === '반품요청')) return '반품요청';
+      if (o.items.some(i => i.status === '반품완료')) return '반품완료';
+      return '주문취소';
+    }
     return STATUS_FLOW[Math.min(...live.map(i => STATUS_FLOW.indexOf(i.status)))];
   },
   canCancel(o) {
@@ -245,6 +269,8 @@ const Orders = {
     });
     o.cancelledAt = new Date().toISOString();
     if (o.pointsUsed) Auth.addPoints(o.userEmail, o.pointsUsed);
+    if (o.coupon) CouponBox.restore(o.no, o.userEmail);
+    o.items.forEach(i => { if (i.sellerEmail) Notify.push(i.sellerEmail, '❌ 주문이 취소되었어요: ' + i.name, 'seller.html?tab=orders'); });
     this.saveAll(all);
     return true;
   },
@@ -259,8 +285,53 @@ const Orders = {
     o.items[idx].status = status;
     if (tracking !== undefined) o.items[idx].tracking = tracking;
     this.saveAll(all);
+    const link = 'order-complete.html?no=' + encodeURIComponent(no);
+    if (status === '배송중') Notify.push(o.userEmail, `🚚 '${o.items[idx].name}' 상품이 발송되었어요.`, link);
+    if (status === '배송완료') Notify.push(o.userEmail, `📦 '${o.items[idx].name}' 배송이 완료되었어요. 구매확정하고 적립금 받으세요!`, 'mypage.html');
     return true;
   },
+  // 이 상품에 실제로 결제한 금액 비율로 환불액 계산 (쿠폰·적립금 안분)
+  refundFor(o, it) {
+    const t = o.totals || {};
+    const line = it.price * it.qty;
+    const share = t.subtotal ? line / t.subtotal : 0;
+    const paid = Math.floor(share * (t.subtotal - (t.couponDiscount || 0) - (t.pointsUsed || 0)));
+    const points = Math.floor(share * (t.pointsUsed || 0));
+    const fee = it.returnReason === '단순 변심' ? Math.min(RETURN_FEE, paid) : 0;
+    return { cash: paid - fee, points, fee };
+  },
+  requestReturn(no, idx, reason, detail) {
+    const all = this.all();
+    const o = all.find(x => x.no === no);
+    const it = o && o.items[idx];
+    if (!it || it.status !== '배송완료' || !RETURN_REASONS.includes(reason)) return false;
+    it.status = '반품요청';
+    it.returnReason = reason;
+    it.returnDetail = String(detail || '').slice(0, 300);
+    it.returnAt = new Date().toISOString();
+    this.saveAll(all);
+    if (it.sellerEmail) Notify.push(it.sellerEmail, `↩️ 반품 요청이 들어왔어요: ${it.name} (${reason})`, 'seller.html?tab=orders');
+    return true;
+  },
+  _applyReturn(o, it) {
+    const r = this.refundFor(o, it);
+    it.status = '반품완료';
+    it.refund = r;
+    it.returnDoneAt = new Date().toISOString();
+    Catalog.adjustStock(it.id, it.qty);
+    if (r.points) Auth.addPoints(o.userEmail, r.points);
+    Notify.push(o.userEmail, `💸 반품이 완료되어 ${won(r.cash)} 환불${r.points ? ` · 적립금 ${r.points.toLocaleString()}P 반환` : ''}되었어요.`, 'order-complete.html?no=' + encodeURIComponent(o.no));
+  },
+  approveReturn(no, idx) {
+    const all = this.all();
+    const o = all.find(x => x.no === no);
+    const it = o && o.items[idx];
+    if (!it || it.status !== '반품요청') return false;
+    this._applyReturn(o, it);
+    this.saveAll(all);
+    return true;
+  },
+
   // 구매확정 → 적립금 지급
   confirm(no, idx) {
     const all = this.all();
@@ -308,3 +379,129 @@ function calcTotals(lines, couponCode, pointsWanted) {
     total: subtotal - couponDiscount - pointsUsed + shipping,
   };
 }
+
+
+// ---------- 쿠폰함 (회원별, 1회 사용) ----------
+const CouponBox = {
+  key(email) { return 'coupons_' + email; },
+  _email(email) { return email || (Auth.current() || {}).email; },
+  list(email) {
+    email = this._email(email);
+    if (!email) return [];
+    let l = Store.get(this.key(email), null);
+    if (l === null) { // 처음 열면 신규회원 쿠폰 지급 (기존 회원 포함)
+      l = [{ code: 'WELCOME10', at: new Date().toISOString(), used: null }];
+      Store.set(this.key(email), l);
+    }
+    return l.filter(c => COUPONS[c.code]);
+  },
+  has(code, email) { return this.list(email).some(c => c.code === code); },
+  // 반환: 'ok' | 'dup' | 'invalid' | 'login'
+  give(code, email) {
+    email = this._email(email);
+    if (!email) return 'login';
+    if (!COUPONS[code]) return 'invalid';
+    const l = this.list(email);
+    if (l.some(c => c.code === code)) return 'dup';
+    l.push({ code, at: new Date().toISOString(), used: null });
+    Store.set(this.key(email), l);
+    return 'ok';
+  },
+  usable(email) { return this.list(email).filter(c => !c.used); },
+  use(code, orderNo, email) {
+    email = this._email(email);
+    const l = this.list(email);
+    const c = l.find(x => x.code === code && !x.used);
+    if (!c) return false;
+    c.used = orderNo;
+    Store.set(this.key(email), l);
+    return true;
+  },
+  restore(orderNo, email) {
+    const l = this.list(email);
+    let changed = false;
+    l.forEach(c => { if (c.used === orderNo) { c.used = null; changed = true; } });
+    if (changed) Store.set(this.key(email), l);
+  },
+};
+
+// ---------- 알림함 ----------
+const Notify = {
+  list(email) {
+    email = email || (Auth.current() || {}).email;
+    return email ? Store.get('noti_' + email, []) : [];
+  },
+  push(email, text, link) {
+    if (!email) return;
+    const l = this.list(email);
+    l.unshift({ id: uid('n'), text, link: link || '', date: new Date().toISOString(), read: false });
+    Store.set('noti_' + email, l.slice(0, 50));
+  },
+  unread(email) { return this.list(email).filter(n => !n.read).length; },
+  readAll(email) {
+    email = email || (Auth.current() || {}).email;
+    if (email) Store.set('noti_' + email, this.list(email).map(n => ({ ...n, read: true })));
+  },
+};
+
+// ---------- 재입고 알림 ----------
+const Restock = {
+  all() { return Store.get('restock', []); },
+  has(id, email) { return this.all().some(r => r.productId === Number(id) && r.email === email); },
+  toggle(id, email) {
+    id = Number(id);
+    const on = !this.has(id, email);
+    Store.set('restock', on ? [...this.all(), { productId: id, email, at: new Date().toISOString() }] : this.all().filter(r => !(r.productId === id && r.email === email)));
+    return on;
+  },
+  count(id) { return this.all().filter(r => r.productId === Number(id)).length; },
+  fire(id) {
+    const p = Catalog.get(id);
+    const list = this.all();
+    list.filter(r => r.productId === Number(id)).forEach(r =>
+      Notify.push(r.email, `🔔 재입고! '${p ? p.name : '상품'}'을(를) 다시 구매할 수 있어요.`, 'product.html?id=' + id));
+    Store.set('restock', list.filter(r => r.productId !== Number(id)));
+  },
+};
+
+// ---------- 배송지 목록 (회원별, 최대 10개) ----------
+const AddressBook = {
+  list() {
+    const u = Auth.current();
+    if (!u) return [];
+    if (!u.addresses && u.address) { // 예전 단일 배송지 이전
+      const a = { id: uid('a'), ...u.address };
+      Auth.updateCurrent({ addresses: [a], defaultAddr: a.id });
+      return [a];
+    }
+    return u.addresses || [];
+  },
+  defaultId() { this.list(); return (Auth.current() || {}).defaultAddr; },
+  getDefault() { const l = this.list(); return l.find(a => a.id === this.defaultId()) || l[0] || null; },
+  same(a, b) { return ['name', 'phone', 'zip', 'addr1', 'addr2'].every(k => (a[k] || '') === (b[k] || '')); },
+  _sync(l, def) {
+    const d = l.find(x => x.id === def) || null;
+    Auth.updateCurrent({ addresses: l, defaultAddr: d ? def : null, address: d ? { name: d.name, phone: d.phone, zip: d.zip, addr1: d.addr1, addr2: d.addr2 } : null });
+  },
+  // 반환: 저장된 배송지 id (목록이 가득 차면 null)
+  save(addr, makeDefault) {
+    let l = this.list();
+    const clean = { name: addr.name, phone: addr.phone, zip: addr.zip, addr1: addr.addr1, addr2: addr.addr2 };
+    let a = addr.id ? l.find(x => x.id === addr.id) : l.find(x => this.same(x, clean));
+    if (a) l = l.map(x => (x.id === a.id ? { ...x, ...clean } : x));
+    else {
+      if (l.length >= 10) return null;
+      a = { id: uid('a'), ...clean };
+      l = [...l, a];
+    }
+    this._sync(l, makeDefault || l.length === 1 ? a.id : this.defaultId());
+    return a.id;
+  },
+  remove(id) {
+    const l = this.list().filter(x => x.id !== id);
+    let def = this.defaultId();
+    if (def === id || !l.some(x => x.id === def)) def = l[0] ? l[0].id : null;
+    this._sync(l, def);
+  },
+  setDefault(id) { this._sync(this.list(), id); },
+};

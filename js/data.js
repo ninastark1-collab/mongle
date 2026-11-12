@@ -56,16 +56,18 @@ const RAW_PRODUCTS = [
 const BASE_PRODUCTS = RAW_PRODUCTS.map(([id, category, name, price, originalPrice, rating, reviews, emoji, fast, freeShip, options]) => ({
   id, category, name, price, originalPrice, rating, reviews, emoji, fast, freeShip, options,
   gradient: GRADIENTS[id % GRADIENTS.length],
-  seller: 'HAUL. 직영', sellerEmail: null, image: '',
+  seller: 'PIKK. 직영', sellerEmail: null, image: '',
   stock: id === 25 ? 0 : id === 5 ? 3 : id === 17 ? 8 : 100,
   createdAt: '2026-01-01T00:00:00.000Z',
   discount: Math.round((1 - price / originalPrice) * 100),
-  description: `${name}은(는) HAUL. 에디터가 직접 써보고 고른 아이템이에요. 꼼꼼한 품질 검수를 거쳐 안전하게 포장해 보내드립니다. 받아보신 후 7일 이내 단순 변심 반품이 가능합니다.`,
+  description: `${name}은(는) PIKK. 에디터가 직접 써보고 고른 아이템이에요. 꼼꼼한 품질 검수를 거쳐 안전하게 포장해 보내드립니다. 받아보신 후 7일 이내 단순 변심 반품이 가능합니다.`,
 }));
 
+// 쿠폰: 회원별 쿠폰함에 받아서 1회 사용 (주문 취소 시 복구)
 const COUPONS = {
-  WELCOME10: { label: '신규회원 10% 할인 (최대 1만원)', type: 'percent', value: 10, max: 10000, min: 0 },
-  HAUL5000: { label: '5,000원 할인 (3만원 이상 구매 시)', type: 'amount', value: 5000, min: 30000 },
+  WELCOME10: { label: '신규회원 10% 할인 (최대 1만원)', short: '10%', type: 'percent', value: 10, max: 10000, min: 0, how: '가입 시 자동 지급' },
+  PIKK5000: { label: '5,000원 할인 (3만원 이상 구매 시)', short: '5천원', type: 'amount', value: 5000, min: 30000, how: '홈 쿠폰존에서 받기' },
+  SALE15: { label: '타임세일 15% 할인 (5만원 이상, 최대 1.5만원)', short: '15%', type: 'percent', value: 15, max: 15000, min: 50000, how: '오늘의 타임세일 배너에서 받기' },
 };
 
 const POINT_RATE = 0.01;

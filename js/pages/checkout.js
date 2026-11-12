@@ -9,7 +9,8 @@
     return;
   }
 
-  const addr = user.address || {};
+  const book = AddressBook.list();
+  const addr = AddressBook.getDefault() || {};
   let coupon = '';
   let points = 0;
   const myPoints = user.points || 0;
@@ -20,6 +21,7 @@
       <div>
         <section class="card co-section">
           <h2>배송지</h2>
+          ${book.length ? `<div class="addr-pick" role="group" aria-label="저장된 배송지">${book.map(a => `<button type="button" data-addr="${esc(a.id)}" class="${a.id === addr.id ? 'active' : ''}">${a.id === AddressBook.defaultId() ? '⭐ ' : ''}${esc(a.name)} · ${esc(a.addr1.slice(0, 14))}${a.addr1.length > 14 ? '…' : ''}</button>`).join('')}<button type="button" data-addr="">+ 새 배송지</button></div>` : ''}
           <div class="row">
             <div class="field"><label for="rName">받는 분</label><input class="input" id="rName" value="${esc(addr.name || user.name)}"></div>
             <div class="field"><label for="rPhone">연락처</label><input class="input" id="rPhone" type="tel" value="${esc(addr.phone || user.phone)}"></div>
@@ -33,7 +35,10 @@
               <option>문 앞에 놓아주세요</option><option>경비실에 맡겨주세요</option><option>택배함에 넣어주세요</option><option>배송 전 연락 바랍니다</option>
             </select>
           </div>
-          <label class="check" style="font-size:14px"><input type="checkbox" id="saveAddr" checked> 기본 배송지로 저장</label>
+          <div style="display:flex;gap:18px;flex-wrap:wrap">
+            <label class="check" style="font-size:14px"><input type="checkbox" id="saveAddr" checked> 배송지 목록에 저장</label>
+            <label class="check" style="font-size:14px"><input type="checkbox" id="defAddr" ${book.length ? '' : 'checked'}> 기본 배송지로 설정</label>
+          </div>
           <div class="error-text" id="addrErr"></div>
         </section>
 
@@ -49,9 +54,10 @@
 
         <section class="card co-section">
           <h2>할인 쿠폰</h2>
-          <div class="coupon-row"><input class="input" id="couponInput" placeholder="쿠폰 코드 입력 (예: WELCOME10)"><button class="btn" id="couponBtn">적용</button></div>
+          <select class="select" id="couponSel" aria-label="쿠폰 선택"></select>
           <div id="couponMsg"></div>
-          <div class="demo-note">사용 가능한 데모 쿠폰: <strong>WELCOME10</strong> (10%, 최대 1만원) · <strong>HAUL5000</strong> (3만원 이상 5,000원)</div>
+          <div class="coupon-row" style="margin-top:10px"><input class="input" id="couponInput" placeholder="쿠폰 코드가 있다면 입력해 등록하세요"><button class="btn" id="couponBtn">등록</button></div>
+          <div class="demo-note">쿠폰은 홈 화면 쿠폰존에서 받을 수 있어요. 데모 코드: <strong>WELCOME10</strong> · <strong>PIKK5000</strong> · <strong>SALE15</strong></div>
         </section>
 
         <section class="card co-section">
@@ -110,26 +116,56 @@
 
   $('#zip').addEventListener('input', e => { e.target.value = e.target.value.replace(/\D/g, ''); });
 
+  // 쿠폰: 쿠폰함의 미사용 쿠폰 중 선택 (조건 미달은 비활성)
+  const sub0 = calcTotals(lines).subtotal;
+  function paintCoupons(selected) {
+    const mine = CouponBox.usable();
+    const ok = mine.filter(c => sub0 >= COUPONS[c.code].min);
+    // 가장 할인이 큰 쿠폰을 기본 선택
+    if (selected === undefined) {
+      selected = ok.map(c => c.code).sort((a, b) => calcTotals(lines, b).couponDiscount - calcTotals(lines, a).couponDiscount)[0] || '';
+    }
+    $('#couponSel').innerHTML = `<option value="">${mine.length ? '쿠폰 사용 안 함' : '사용 가능한 쿠폰이 없어요'}</option>` + mine.map(c => {
+      const def = COUPONS[c.code];
+      const can = sub0 >= def.min;
+      return `<option value="${c.code}" ${can ? '' : 'disabled'} ${c.code === selected ? 'selected' : ''}>${esc(def.label)}${can ? ` → -${won(calcTotals(lines, c.code).couponDiscount)}` : ` (${won(def.min)} 이상 구매 시)`}</option>`;
+    }).join('');
+    setCoupon(selected);
+  }
+  function setCoupon(code) {
+    coupon = code || '';
+    const msg = $('#couponMsg');
+    msg.className = coupon ? 'success-text' : '';
+    msg.textContent = coupon ? `✓ ${COUPONS[coupon].label} 쿠폰이 적용되었어요.` : '';
+    applyPoints(points);
+  }
+  $('#couponSel').addEventListener('change', e => setCoupon(e.target.value));
   $('#couponBtn').addEventListener('click', () => {
     const code = $('#couponInput').value.trim().toUpperCase();
     const msg = $('#couponMsg');
-    const c = COUPONS[code];
-    const sub = calcTotals(lines).subtotal;
-    if (!c) {
-      coupon = '';
+    const r = CouponBox.give(code);
+    if (r === 'invalid') { msg.className = 'error-text'; msg.textContent = '존재하지 않는 쿠폰 코드예요.'; return; }
+    if (r === 'dup' && !CouponBox.usable().some(c => c.code === code)) { msg.className = 'error-text'; msg.textContent = '이미 사용한 쿠폰이에요.'; return; }
+    $('#couponInput').value = '';
+    if (sub0 < COUPONS[code].min) {
+      paintCoupons(coupon);
       msg.className = 'error-text';
-      msg.textContent = '존재하지 않는 쿠폰 코드예요.';
-    } else if (sub < c.min) {
-      coupon = '';
-      msg.className = 'error-text';
-      msg.textContent = `${won(c.min)} 이상 구매 시 사용할 수 있어요.`;
-    } else {
-      coupon = code;
-      msg.className = 'success-text';
-      msg.textContent = `✓ ${c.label} 쿠폰이 적용되었어요.`;
+      msg.textContent = `쿠폰함에 등록했어요. 이 쿠폰은 ${won(COUPONS[code].min)} 이상 구매 시 쓸 수 있어요.`;
+      return;
     }
-    applyPoints(points);
+    paintCoupons(code);
   });
+  paintCoupons();
+
+  // 저장된 배송지 선택
+  $$('[data-addr]').forEach(b => b.addEventListener('click', () => {
+    const a = AddressBook.list().find(x => x.id === b.dataset.addr) || { name: '', phone: '', zip: '', addr1: '', addr2: '' };
+    $('#rName').value = a.name || (b.dataset.addr ? '' : user.name);
+    $('#rPhone').value = a.phone || (b.dataset.addr ? '' : user.phone);
+    $('#zip').value = a.zip; $('#addr1').value = a.addr1; $('#addr2').value = a.addr2;
+    $$('[data-addr]').forEach(x => x.classList.toggle('active', x === b));
+    if (!b.dataset.addr) $('#zip').focus();
+  }));
 
   $('#payBtn').addEventListener('click', () => {
     const f = {
@@ -168,6 +204,7 @@
       }
     }
     if (points > (Auth.current().points || 0)) { toast('적립금이 부족해요.'); applyPoints(0); return; }
+    if (coupon && !CouponBox.usable().some(c => c.code === coupon)) { toast('이미 사용된 쿠폰이에요. 다른 쿠폰을 선택해 주세요.'); paintCoupons(''); return; }
 
     const t = renderSum();
     const btn = $('#payBtn');
@@ -175,7 +212,9 @@
     btn.textContent = '결제 승인 중...';
 
     setTimeout(() => {
-      if ($('#saveAddr').checked) Auth.updateCurrent({ address: f });
+      if ($('#saveAddr').checked || $('#defAddr').checked) {
+        if (AddressBook.save(f, $('#defAddr').checked) === null) toast('배송지는 10개까지 저장할 수 있어요.');
+      }
       const now = new Date();
       const no = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}` + '-' + String(Math.floor(Math.random() * 1e6)).padStart(6, '0');
       Orders.create({
@@ -193,6 +232,7 @@
         coupon,
         totals: t,
       });
+      if (coupon) CouponBox.use(coupon, no);
       lines.forEach(l => Catalog.adjustStock(l.id, -l.qty));
       if (t.pointsUsed) Auth.addPoints(user.email, -t.pointsUsed);
       if (co.source === 'cart') Cart.removeKeys(lines.map(l => l.key));

@@ -12,7 +12,7 @@
   function renderJoin() {
     $('#app').innerHTML = `
       <div class="auth-box" style="max-width:520px">
-        <div class="seller-top"><div class="eyebrow">HAUL. for sellers</div><h1>셀러 등록하기</h1><div>3분이면 내 상품을 판매할 수 있어요. 수수료 0% (데모)</div></div>
+        <div class="seller-top"><div class="eyebrow">PIKK. for sellers</div><h1>셀러 등록하기</h1><div>3분이면 내 상품을 판매할 수 있어요. 수수료 0% (데모)</div></div>
         <form class="card" id="joinForm" novalidate>
           <div class="field"><label for="storeName">스토어 이름</label><input class="input" id="storeName" maxlength="20" placeholder="예: 행복한 과일가게"><div class="error-text" data-err="storeName"></div></div>
           <div class="field"><label for="bizNo">사업자등록번호 (데모: 아무 숫자 10자리)</label><input class="input" id="bizNo" inputmode="numeric" placeholder="123-45-67890"><div class="error-text" data-err="bizNo"></div></div>
@@ -47,7 +47,7 @@
   function render() {
     const u = me();
     if (!u.seller) return renderJoin();
-    const newOrders = Orders.forSeller(u.email).filter(r => r.item.status === '결제완료').length;
+    const newOrders = Orders.forSeller(u.email).filter(r => ['결제완료', '반품요청'].includes(r.item.status)).length;
     const openQna = myQna().filter(q => !q.answer).length;
     const badge = n => (n ? ` <span class="badge-count" style="position:static;display:inline-flex">${n}</span>` : '');
     const body = { dash: dashHtml, products: productsHtml, new: formHtml, orders: ordersHtml, qna: qnaHtml, store: storeHtml }[tab]();
@@ -78,7 +78,7 @@
   // ---------- 대시보드 ----------
   function dashHtml() {
     const rows = Orders.forSeller(me().email);
-    const live = rows.filter(r => r.item.status !== '주문취소');
+    const live = rows.filter(r => !['주문취소', '반품완료'].includes(r.item.status));
     const sales = live.reduce((s, r) => s + r.item.price * r.item.qty, 0);
     const prods = myProducts();
     const low = prods.filter(p => p.stock <= 5);
@@ -91,6 +91,13 @@
         <div class="stat"><div class="label">배송 중</div><div class="value">${cnt('배송준비중') + cnt('배송중')}건</div></div>
         <div class="stat"><div class="label">등록 상품</div><div class="value">${prods.length}개</div></div>
       </div>
+      <div class="settle">
+        <div><span class="muted">정산 완료 (구매확정)</span><b>${won(rows.filter(r => r.item.status === '구매확정').reduce((s, r) => s + r.item.price * r.item.qty, 0))}</b></div>
+        <div><span class="muted">정산 예정 (배송~구매확정 전)</span><b>${won(rows.filter(r => ['결제완료', '배송준비중', '배송중', '배송완료'].includes(r.item.status)).reduce((s, r) => s + r.item.price * r.item.qty, 0))}</b></div>
+        <div><span class="muted">반품 환불</span><b>${won(rows.filter(r => r.item.refund).reduce((s, r) => s + r.item.refund.cash, 0))}</b></div>
+        <div><span class="muted">판매 수수료</span><b>0% (데모)</b></div>
+      </div>
+      ${cnt('반품요청') ? `<div class="free-hint" style="background:#fff4d6;color:#8a5a00">↩️ 처리할 반품 요청 ${cnt('반품요청')}건 <button class="link-btn" data-go="orders">주문/배송에서 확인 →</button></div>` : ''}
       ${low.length ? `<div class="free-hint">⚠️ 재고가 부족한 상품 ${low.length}개: ${low.map(p => `${esc(p.name)}(${p.stock}개)`).join(', ')} <button class="link-btn" data-go="products">재고 관리 →</button></div>` : ''}
       ${!prods.length ? `<div class="empty"><div class="ico">📦</div><p>아직 등록한 상품이 없어요.</p><button class="btn btn-primary" data-go="new">첫 상품 등록하기</button></div>` : `
       <h3>최근 주문</h3>
@@ -264,7 +271,7 @@
   }
 
   // ---------- 주문/배송 ----------
-  const NEXT = { 결제완료: ['배송준비중', '발주확인'], 배송준비중: ['배송중', '발송처리'], 배송중: ['배송완료', '배송완료 처리'] };
+  const NEXT = { 결제완료: ['배송준비중', '발주확인'], 배송준비중: ['배송중', '발송처리'], 배송중: ['배송완료', '배송완료 처리'], 반품요청: ['반품완료', '반품 승인'] };
   function orderTable(rows, withActions) {
     return `<div class="table-wrap"><table class="table">
       <thead><tr><th>주문일</th><th>주문번호</th><th>상품</th><th>금액</th><th>구매자 / 배송지</th><th>상태</th>${withActions ? '<th>처리</th>' : ''}</tr></thead>
@@ -274,13 +281,13 @@
         <td>${esc(it.name)}${it.option ? `<div class="muted" style="font-size:12px">${esc(it.option)}</div>` : ''}<div class="muted" style="font-size:12px">${it.qty}개</div></td>
         <td style="white-space:nowrap">${won(it.price * it.qty)}</td>
         <td style="font-size:13px">${esc(o.address.name)} ${esc(o.address.phone)}<div class="muted">[${esc(o.address.zip)}] ${esc(o.address.addr1)} ${esc(o.address.addr2)}</div><div class="muted">요청: ${esc(o.memo)}</div></td>
-        <td><span class="status s-${it.status}">${it.status}</span>${it.tracking ? `<div class="muted" style="font-size:11px">송장 ${esc(it.tracking)}</div>` : ''}</td>
+        <td><span class="status s-${it.status}">${it.status}</span>${it.tracking ? `<div class="muted" style="font-size:11px">송장 ${esc(it.tracking)}</div>` : ''}${it.returnReason ? `<div class="muted" style="font-size:11px">사유: ${esc(it.returnReason)}${it.returnDetail ? ' · ' + esc(it.returnDetail) : ''}</div>` : ''}</td>
         ${withActions ? `<td>${NEXT[it.status] ? `<button class="btn btn-sm btn-primary" data-next="${esc(o.no)}" data-idx="${idx}" data-from="${it.status}">${NEXT[it.status][1]}</button>` : '<span class="muted" style="font-size:12px">-</span>'}</td>` : ''}
       </tr>`).join('')}</tbody></table></div>`;
   }
   function ordersHtml() {
     const all = Orders.forSeller(me().email);
-    const filters = ['전체', '결제완료', '배송준비중', '배송중', '배송완료', '구매확정', '주문취소'];
+    const filters = ['전체', '결제완료', '배송준비중', '배송중', '배송완료', '구매확정', '반품요청', '반품완료', '주문취소'];
     const rows = orderFilter === '전체' ? all : all.filter(r => r.item.status === orderFilter);
     return `<h1 class="page-title" style="margin-top:0">주문/배송 관리</h1>
       <div class="sort-tabs" style="margin-bottom:12px">${filters.map(f => `<button data-filter="${f}" class="${f === orderFilter ? 'active' : ''}">${f} (${f === '전체' ? all.length : all.filter(r => r.item.status === f).length})</button>`).join('')}</div>
@@ -297,10 +304,24 @@
       // 버튼이 표시된 뒤 상태가 바뀐 경우 (중복 클릭·다른 탭에서 처리)
       if (!NEXT[it.status] || it.status !== b.dataset.from) { toast('이미 처리된 주문이에요.'); render(); return; }
       const [next] = NEXT[it.status];
+      if (next === '반품완료') {
+        const r = Orders.refundFor(o, it);
+        modal({
+          title: '반품 승인',
+          body: `<p><b>${esc(it.name)}</b> ${it.qty}개<br>사유: ${esc(it.returnReason)}${it.returnDetail ? `<br><span class="muted">${esc(it.returnDetail)}</span>` : ''}</p>
+            <div class="free-hint">구매자에게 ${won(r.cash)} 환불${r.points ? ` + 적립금 ${r.points.toLocaleString()}P 반환` : ''}${r.fee ? ` (반품배송비 ${won(r.fee)} 차감)` : ''}<br>재고 ${it.qty}개가 복구돼요.</div>`,
+          okText: '반품 승인',
+          onOk: () => {
+            toast(Orders.approveReturn(no, idx) ? '반품을 승인하고 환불 처리했어요.' : '이미 처리된 반품이에요.');
+            render();
+          },
+        });
+        return;
+      }
       if (next === '배송중') {
         modal({
           title: '발송 처리',
-          body: `<div class="field"><label for="trk">택배사 / 송장번호</label><input class="input" id="trk" placeholder="예: 하울택배 1234567890" maxlength="30"></div><div class="error-text" id="trkErr"></div>`,
+          body: `<div class="field"><label for="trk">택배사 / 송장번호</label><input class="input" id="trk" placeholder="예: 픽택배 1234567890" maxlength="30"></div><div class="error-text" id="trkErr"></div>`,
           okText: '발송 처리',
           onOk: w => {
             const t = $('#trk', w).value.trim();

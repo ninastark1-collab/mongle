@@ -1,10 +1,11 @@
 // 공통 유틸 + 헤더/푸터 렌더링
-const BRAND = 'HAUL.';
-const LOGO = 'HAUL<i>.</i>';
+const BRAND = 'PIKK.';
+const LOGO = 'PIKK<i>.</i>';
 const ICON = {
   search: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
   user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
   bag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 8h14l-1.2 12.2a1 1 0 0 1-1 .8H7.2a1 1 0 0 1-1-.8L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2" stroke-linecap="round"/></svg>',
+  bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>',
   heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
 };
 
@@ -56,7 +57,7 @@ function productCard(p, i, opts) {
     ${rank ? `<span class="rank ${rank <= 3 ? 'top' : ''}">${rank}</span>` : ''}
     <button class="wish-btn" data-wish="${p.id}" aria-label="찜하기" aria-pressed="${wished}">${wished ? '❤️' : '🤍'}</button>
     <a href="product.html?id=${p.id}">
-      ${thumb(p)}
+      <div class="thumb-wrap">${thumb(p)}${p.discount >= 20 && !p.soldOut ? `<span class="sale-badge">-${p.discount}%</span>` : ''}</div>
       <div class="info">
         <div class="name">${esc(p.name)}</div>
         ${priceBlock(p)}
@@ -165,17 +166,19 @@ function renderHeader() {
       ? `<span><strong>${esc(user.name)}</strong>님 · <strong>${Number(user.points || 0).toLocaleString()}P</strong></span><button id="logoutBtn">로그아웃</button>`
       : `<a href="${loginUrl()}">로그인</a><a href="signup.html">회원가입</a>`}
     <a href="mypage.html">주문조회</a>
+    <a href="help.html">고객센터</a>
     <a href="seller.html" class="seller-link">셀러센터 ↗</a>
   </div></div>
   <header class="header">
     <div class="container header-main">
-      <a href="index.html" class="logo" aria-label="HAUL 홈">${LOGO}</a>
+      <a href="index.html" class="logo" aria-label="PIKK 홈">${LOGO}</a>
       <form class="search" action="products.html" role="search" id="searchForm" autocomplete="off">
-        <input name="q" id="searchInput" type="search" placeholder="오늘은 뭘 하울해볼까?" value="${esc(q)}" aria-label="상품 검색" maxlength="50">
+        <input name="q" id="searchInput" type="search" placeholder="오늘의 픽을 찾아보세요" value="${esc(q)}" aria-label="상품 검색" maxlength="50">
         <button type="submit" aria-label="검색">${ICON.search}</button>
         <div class="suggest hidden" id="suggest"></div>
       </form>
       <nav class="header-icons">
+        ${user ? `<div class="noti-wrap"><button type="button" class="icon-btn" id="notiBtn" aria-label="알림" aria-expanded="false">${ICON.bell}<span class="label">알림</span><span id="notiCount" class="badge-count hidden">0</span></button><div class="noti-panel hidden" id="notiPanel"></div></div>` : ''}
         <a href="mypage.html?tab=wish" aria-label="찜">${ICON.heart}<span class="label">찜</span></a>
         <a href="mypage.html" aria-label="마이페이지">${ICON.user}<span class="label">MY</span></a>
         <a href="cart.html" aria-label="장바구니">${ICON.bag}<span class="label">장바구니</span><span id="cartCount" class="badge-count hidden">0</span></a>
@@ -194,7 +197,47 @@ function renderHeader() {
     location.href = 'index.html';
   });
   setupSearch();
+  setupNoti();
   updateCartBadge();
+}
+
+// 알림함 (재입고·발송·답변·반품 알림)
+function setupNoti() {
+  const btn = $('#notiBtn');
+  if (!btn) return;
+  const panel = $('#notiPanel');
+  const count = $('#notiCount');
+  const paint = () => {
+    const n = Notify.unread();
+    count.textContent = n > 99 ? '99+' : n;
+    count.classList.toggle('hidden', !n);
+  };
+  const ago = iso => {
+    const m = Math.floor((Date.now() - new Date(iso)) / 60000);
+    return m < 1 ? '방금 전' : m < 60 ? m + '분 전' : m < 1440 ? Math.floor(m / 60) + '시간 전' : fmtDate(iso);
+  };
+  btn.addEventListener('click', e => {
+    e.stopPropagation();
+    const open = panel.classList.toggle('hidden') === false;
+    btn.setAttribute('aria-expanded', open);
+    if (!open) return;
+    const list = Notify.list();
+    panel.innerHTML = `<div class="n-head"><span>알림</span>${list.length ? '<button class="link-btn" type="button" id="notiClear">모두 지우기</button>' : ''}</div>` +
+      (list.length ? list.map(n => `<a class="noti-item ${n.read ? '' : 'unread'}" href="${esc(safeRedirect(n.link || 'mypage.html'))}">${esc(n.text)}<div class="muted">${ago(n.date)}</div></a>`).join('')
+        : '<div class="noti-item muted">새 알림이 없어요.<br>재입고·발송·문의답변 소식을 여기서 알려드려요.</div>');
+    Notify.readAll();
+    paint();
+    const clear = $('#notiClear');
+    if (clear) clear.addEventListener('click', ev => {
+      ev.stopPropagation();
+      Store.set('noti_' + Auth.current().email, []);
+      panel.innerHTML = '<div class="noti-item muted">새 알림이 없어요.</div>';
+    });
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.noti-wrap')) { panel.classList.add('hidden'); btn.setAttribute('aria-expanded', 'false'); }
+  });
+  paint();
 }
 
 // 검색창: 최근 검색어 + 자동완성
@@ -263,14 +306,14 @@ function renderFooter() {
   $('#footer').outerHTML = `
   <footer class="footer" id="footer"><div class="container">
     <div class="footer-cols">
-      <div><strong>${LOGO}</strong>취향을 하울하다.<br>오늘 담고, 내일 받는 라이프스타일 마켓.</div>
-      <div><strong>고객센터</strong>1588-0000<br>평일 09:00–18:00</div>
+      <div><strong>${LOGO}</strong>오늘의 픽, 내일 문 앞에.<br>오늘 담고, 내일 받는 라이프스타일 마켓.</div>
+      <div><strong>고객센터</strong>1588-0000<br>평일 09:00–18:00<br><a href="help.html">자주 묻는 질문 · 공지 →</a></div>
       <div><strong>쇼핑 혜택</strong>${won(FREE_SHIPPING_MIN)} 이상 무료배송<br>구매확정 ${POINT_RATE * 100}% 적립 · 가입 2,000P</div>
       <div><strong>셀러</strong><a href="seller.html">수수료 0%로 입점하기 →</a></div>
     </div>
     <div class="notice">⚠️ 학습용 데모 사이트입니다. 실제 결제·배송이 이루어지지 않으며, 회원·주문·상품 정보는 이 브라우저(localStorage)에만 저장됩니다. 실제 사용하는 비밀번호를 입력하지 마세요.</div>
-    <div class="footer-bottom"><span>© 2026 HAUL. All rights reserved.</span><button class="link-btn" id="toTop" type="button">맨 위로 ↑</button></div>
-    <div class="wordmark" aria-hidden="true">HAUL<i>.</i></div>
+    <div class="footer-bottom"><span>© 2026 PIKK. All rights reserved.</span><button class="link-btn" id="toTop" type="button">맨 위로 ↑</button></div>
+    <div class="wordmark" aria-hidden="true">PIKK<i>.</i></div>
   </div></footer>`;
   $('#toTop').addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
 }

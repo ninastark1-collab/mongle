@@ -9,16 +9,17 @@
   const status = Orders.status(o);
   const a = o.address;
   const t = o.totals;
+  // 일부만 반품된 주문은 남은 상품 기준으로 진행 단계 표시
   const step = STATUS_FLOW.indexOf(status);
-  document.title = (isNew ? '주문 완료' : '주문 상세') + ' | HAUL.';
+  document.title = (isNew ? '주문 완료' : '주문 상세') + ' | PIKK.';
 
   $('#app').innerHTML = `
     <div class="complete">
       ${isNew ? `<div class="ico">🎉</div><h1>주문이 완료되었습니다!</h1>` : `<h1 class="page-title">주문 상세</h1>`}
       <p class="muted">${fmtDate(o.date)} 주문 · 주문번호 <strong>${esc(o.no)}</strong></p>
       <div class="card">
-        ${status === '주문취소'
-          ? '<div class="center"><span class="status s-주문취소">주문취소</span><p class="muted">취소된 주문이에요. 사용한 적립금은 반환되었어요.</p></div>'
+        ${step < 0
+          ? `<div class="center"><span class="status s-${status}">${status}</span><p class="muted">${status === '주문취소' ? '취소된 주문이에요. 사용한 적립금과 쿠폰은 반환되었어요.' : status === '반품요청' ? '반품 신청이 접수되었어요. 판매자 확인 후 환불돼요.' : '반품이 완료되어 환불되었어요.'}</p></div>`
           : `<div class="timeline">${STATUS_FLOW.map((s, i) => `<div class="step ${i <= step ? 'done' : ''}"><div class="dot">${i <= step ? '✓' : i + 1}</div>${s}</div>`).join('')}</div>`}
       </div>
       <div class="card">
@@ -26,8 +27,10 @@
         ${o.items.map(i => {
           const p = getProduct(i.id);
           return `<div class="co-item">${p ? `<a href="product.html?id=${p.id}">${thumb(p, 'sm')}</a>` : '<div class="thumb sm" style="background:var(--bg)"><span class="emoji">📦</span></div>'}
-            <div><div>${esc(i.name)}</div><div class="muted" style="font-size:13px">${i.option ? esc(i.option) + ' · ' : ''}${i.qty}개 · ${esc(i.seller || 'HAUL. 직영')}</div>
-            ${i.tracking ? `<div class="muted" style="font-size:12px">송장: ${esc(i.tracking)}</div>` : ''}</div>
+            <div><div>${esc(i.name)}</div><div class="muted" style="font-size:13px">${i.option ? esc(i.option) + ' · ' : ''}${i.qty}개 · ${esc(i.seller || 'PIKK. 직영')}</div>
+            ${i.tracking ? `<div class="muted" style="font-size:12px">송장: ${esc(i.tracking)}</div>` : ''}
+            ${i.returnReason ? `<div class="muted" style="font-size:12px">반품 사유: ${esc(i.returnReason)}</div>` : ''}
+            ${i.refund ? `<div class="muted" style="font-size:12px">환불 ${won(i.refund.cash)}${i.refund.points ? ` + ${i.refund.points.toLocaleString()}P` : ''}${i.refund.fee ? ` (반품배송비 ${won(i.refund.fee)} 차감)` : ''}</div>` : ''}</div>
             <div style="text-align:right">${won(i.price * i.qty)}<br><span class="status s-${i.status}">${i.status}</span></div></div>`;
         }).join('')}
       </div>
