@@ -941,3 +941,16 @@ h1, h2, h3, .logo, .section-head h2, h1.page-title, .bento h3, .cta-band h3, .ti
 .quiz-chip:hover { border-color: var(--sage); background: #fff7f9; }
 .quiz-chip.on { background: var(--hot); border-color: var(--hot); color: #fff; }
 @media (max-width: 640px) { .quiz-form { max-height: 60vh; } .quiz-chip { padding: 7px 12px; } }
+/* v15: 분양비 안내 카드 */
+.fee-card { background: #fff; border: 1.5px solid var(--line); border-radius: 20px; padding: 16px 18px; margin: 4px 0 14px; box-shadow: var(--shadow-cute); }
+.fee-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
+.fee-head span { font-weight: 700; color: var(--forest); }
+.fee-head strong { font-family: var(--display); font-weight: 400; font-size: 30px; color: var(--text); }
+.fee-range { margin: 10px 0 8px; }
+.fee-bar { position: relative; height: 10px; border-radius: 999px; background: linear-gradient(90deg, #dcf4e8, #fff3c4, #ffd3df); }
+.fee-bar i { position: absolute; top: 50%; width: 18px; height: 18px; border-radius: 50%; background: var(--hot); border: 3px solid #fff; box-shadow: 0 2px 6px rgba(226, 87, 127, .45); transform: translate(-50%, -50%); }
+.fee-scale { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; margin-top: 6px; }
+.fee-scale .muted { text-align: center; }
+.fee-why { font-size: 13px; color: #6f5c57; margin: 6px 0 8px; line-height: 1.55; }
+.fee-inc { display: flex; flex-wrap: wrap; gap: 6px; }
+.fee-inc span { background: #f3faf6; color: #2f7a57; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; }

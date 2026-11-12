@@ -104,7 +104,15 @@
           <div class="qty"><button id="minus" aria-label="수량 감소">−</button><input id="qty" value="1" inputmode="numeric" aria-label="수량"><button id="plus" aria-label="수량 증가">+</button></div>
         </div>
 
-        <div class="total-line"><span>${p.live ? '분양비 <span class="muted" style="font-size:12px;font-weight:400">(건강검진·접종·돌봄 비용)</span>' : '준비물 금액'}</span><strong id="total">${p.live ? feeText(p.price) : won(p.price)}</strong></div>
+        ${p.live && p.fee ? `<div class="fee-card">
+          <div class="fee-head"><span>${p.fee.type === '책임비' ? '🤝 책임비' : '🏷️ 분양비'}</span><strong id="total">${feeText(p.price)}</strong></div>
+          <div class="fee-range" aria-label="국내 일반 시세 범위">
+            <div class="fee-bar"><i style="left:${Math.round(p.fee.pos * 100)}%"></i></div>
+            <div class="fee-scale"><span>${feeText(p.fee.lo)}</span><span class="muted">${esc(getCategory(p.category).name)} · ${esc(p.name.split(' · ')[0])} 일반 시세</span><span>${feeText(p.fee.hi)}</span></div>
+          </div>
+          <p class="fee-why">${esc(p.fee.why)}</p>
+          <div class="fee-inc">${p.fee.includes.map(t => `<span>✓ ${esc(t)}</span>`).join('')}</div>
+        </div>` : `<div class="total-line"><span>준비물 금액</span><strong id="total">${won(p.price)}</strong></div>`}
         <div class="actions">
           <button class="btn" id="wish" aria-label="${p.live ? '관심 친구로 저장' : '찜하기'}" aria-pressed="${Wish.has(p.id)}">${Wish.has(p.id) ? '❤️' : '🤍'}</button>
           ${p.soldOut || hidden

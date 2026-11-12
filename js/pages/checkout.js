@@ -153,7 +153,7 @@
     const t = calcTotals(lines, coupon, points);
     $('#sum').innerHTML = `
       ${liveOnly
-        ? `<div class="sum-row"><span>분양비 (건강검진·접종·돌봄)</span><span>${won(t.subtotal)}</span></div>
+        ? `<div class="sum-row"><span>${pet && pet.fee && pet.fee.type === '책임비' ? '책임비 (평생 책임 약속)' : '분양비 (건강검진·돌봄 포함)'}</span><span>${won(t.subtotal)}</span></div>
            <div class="sum-row"><span>인계비</span><span>무료</span></div>`
         : `<div class="sum-row"><span>준비물 금액</span><span>${won(t.originTotal)}</span></div>
       <div class="sum-row"><span>준비물 할인</span><span style="color:var(--danger)">-${won(t.saved)}</span></div>

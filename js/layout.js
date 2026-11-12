@@ -79,7 +79,7 @@ function petCard(p) {
         <div class="name">${esc(p.name)}</div>
         ${p.pet ? `<div class="pet-meta">${esc(p.pet.age)} · ${esc(p.pet.care)}</div>` : ''}
         ${p.pet && p.pet.note ? `<div class="pet-note">“${esc(p.pet.note)}”</div>` : ''}
-        <div class="adopt-fee"><span>분양비</span> ${feeText(p.price)}</div>
+        <div class="adopt-fee"><span>${p.fee && p.fee.type === '책임비' ? '책임비' : '분양비'}</span> ${feeText(p.price)}</div>
         <div class="tags">
           ${p.isNew && !p.soldOut ? '<span class="tag tag-new">🍼 새로 왔어요</span>' : ''}
           ${p.pet && p.pet.adult && !p.soldOut ? '<span class="tag tag-adult">🧓 의젓한 어른 친구</span>' : ''}
