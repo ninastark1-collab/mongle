@@ -914,7 +914,7 @@ h1, h2, h3, .logo, .section-head h2, h1.page-title, .bento h3, .cta-band h3, .ti
 .welcome-modal h3 { font-family: var(--display); font-weight: 400; font-size: 26px; margin: 10px 0 8px; }
 .welcome-modal p { margin: 0 0 18px; line-height: 1.6; }
 .welcome-paws { font-size: 30px; letter-spacing: 4px; animation: float 4s ease-in-out infinite; }
-.quiz-fab { position: fixed; right: 22px; bottom: 22px; z-index: 80; display: flex; align-items: center; gap: 8px; border: 0; background: linear-gradient(135deg, #ff6b8b, #ff9a6e); color: #fff; font-weight: 700; font-size: 15px; padding: 14px 20px; border-radius: 999px; box-shadow: 0 14px 30px -10px rgba(255, 90, 118, .7); animation: fabWiggle 4s ease-in-out infinite; }
+.quiz-fab { position: fixed; right: 22px; bottom: 22px; z-index: 80; display: flex; align-items: center; gap: 8px; border: 0; background: linear-gradient(135deg, #ff6b8b, #ff9a6e); color: #fff; font-weight: 700; font-size: 15px; padding: 14px 20px; border-radius: 999px; box-shadow: 0 14px 30px -10px rgba(255, 90, 118, .7); }
 .quiz-fab .fab-ico { font-size: 20px; }
 .quiz-fab:hover { transform: translateY(-2px) scale(1.03); }
 @keyframes fabWiggle { 0%, 88%, 100% { transform: rotate(0); } 91% { transform: rotate(-6deg); } 94% { transform: rotate(6deg); } 97% { transform: rotate(-3deg); } }
@@ -929,3 +929,15 @@ h1, h2, h3, .logo, .section-head h2, h1.page-title, .bento h3, .cta-band h3, .ti
   .quiz-band::after { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .quiz-fab, .welcome-paws { animation: none !important; } }
+
+/* v14: 한눈에 보는 퀴즈 */
+.quiz-modal { max-width: 640px; }
+.quiz-form { max-height: 56vh; overflow-y: auto; padding-right: 6px; display: grid; gap: 12px; }
+.quiz-q { background: #fffafb; border: 1.5px solid var(--line); border-radius: 18px; padding: 12px 14px; transition: border-color .2s; }
+.quiz-q.missing { border-color: var(--hot); background: #fff3f5; }
+.quiz-q-label { font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+.quiz-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.quiz-chip { border: 1.5px solid var(--line); background: #fff; border-radius: 999px; padding: 8px 14px; font-size: 13px; font-weight: 600; transition: all .15s var(--ease); }
+.quiz-chip:hover { border-color: var(--sage); background: #fff7f9; }
+.quiz-chip.on { background: var(--hot); border-color: var(--hot); color: #fff; }
+@media (max-width: 640px) { .quiz-form { max-height: 60vh; } .quiz-chip { padding: 7px 12px; } }

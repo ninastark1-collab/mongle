@@ -435,10 +435,10 @@ function quizMatch(a) {
 }
 
 function openQuiz() {
-  try { localStorage.setItem('pet_quizSeen', '1'); } catch (e) { /* 저장 불가 무시 */ }
   $$('.modal-wrap').forEach(m => m.remove());
-  const answers = {};
-  let step = 0;
+  // 지난번 답을 기억해 두었다면 미리 채워 두기
+  let answers = {};
+  try { answers = JSON.parse(localStorage.getItem('pet_quizAnswers') || '{}') || {}; } catch (e) { answers = {}; }
   const wrap = document.createElement('div');
   wrap.className = 'modal-wrap';
   wrap.innerHTML = `<div class="modal quiz-modal" role="dialog" aria-modal="true" aria-label="나와 맞는 친구 찾기"><button class="quiz-close" type="button" aria-label="닫기">✕</button><div class="quiz-body"></div></div>`;
@@ -449,23 +449,48 @@ function openQuiz() {
   document.addEventListener('keydown', onKey);
   wrap.addEventListener('click', e => { if (e.target === wrap || e.target.closest('.quiz-close')) close(); });
 
-  function paintQ() {
-    const [k, q, opts] = QUIZ[step];
+  const done = () => QUIZ.filter(([k]) => answers[k]).length;
+  function paintProgress() {
+    const n = done();
+    $('.quiz-count', body).textContent = `${n} / ${QUIZ.length} 답했어요`;
+    $('.quiz-progress i', body).style.width = Math.round(n / QUIZ.length * 100) + '%';
+  }
+
+  // 한 화면에 모든 질문을 보여주고, 원하는 순서대로 고르기
+  function paintForm() {
     body.innerHTML = `
-      <div class="quiz-top"><span>🧩 나와 꼭 맞는 친구 찾기</span><span>${step + 1} / ${QUIZ.length}</span></div>
-      <div class="quiz-progress"><i style="width:${Math.round((step + 1) / QUIZ.length * 100)}%"></i></div>
-      <h3 class="quiz-q-title">${q}</h3>
-      <div class="quiz-opts">${opts.map(o => `<button type="button" class="quiz-opt ${answers[k] === o ? 'on' : ''}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>
-      <div class="quiz-nav-row">${step ? '<button type="button" class="btn btn-sm" data-back>← 이전</button>' : '<span class="muted" style="font-size:12px">솔직하게 답할수록 잘 맞는 친구를 찾아요</span>'}</div>`;
-    $$('.quiz-opt', body).forEach(b => b.addEventListener('click', () => {
-      answers[k] = b.dataset.v;
-      b.classList.add('on');
-      setTimeout(() => { if (step < QUIZ.length - 1) { step++; paintQ(); } else paintResult(); }, 160);
-    }));
-    const back = $('[data-back]', body);
-    if (back) back.addEventListener('click', () => { step--; paintQ(); });
-    const first = $('.quiz-opt', body);
-    if (first) first.focus();
+      <div class="quiz-top"><span>🧩 나와 꼭 맞는 친구 찾기</span><span class="quiz-count"></span></div>
+      <div class="quiz-progress"><i></i></div>
+      <p class="muted" style="margin:-6px 0 12px;font-size:13px">질문을 한눈에 보고 편한 순서대로 골라 주세요. 솔직하게 답할수록 잘 맞는 친구를 찾아요.</p>
+      <div class="quiz-form">${QUIZ.map(([k, q, opts]) => `
+        <div class="quiz-q" data-k="${k}">
+          <div class="quiz-q-label">${q}</div>
+          <div class="quiz-chips">${opts.map(o => `<button type="button" class="quiz-chip ${answers[k] === o ? 'on' : ''}" data-v="${esc(o)}" aria-pressed="${answers[k] === o}">${esc(o)}</button>`).join('')}</div>
+        </div>`).join('')}</div>
+      <div class="error-text" id="qzErr"></div>
+      <div class="quiz-nav-row"><button type="button" class="link-btn" data-reset>처음부터 다시 고르기</button><button type="button" class="btn btn-primary" data-submit>💛 추천 받기</button></div>`;
+    paintProgress();
+    $$('.quiz-q', body).forEach(row => {
+      const k = row.dataset.k;
+      $$('.quiz-chip', row).forEach(b => b.addEventListener('click', () => {
+        answers[k] = b.dataset.v;
+        $$('.quiz-chip', row).forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+        row.classList.remove('missing');
+        $('#qzErr', body).textContent = '';
+        paintProgress();
+      }));
+    });
+    $('[data-reset]', body).addEventListener('click', () => { answers = {}; paintForm(); });
+    $('[data-submit]', body).addEventListener('click', () => {
+      const missing = QUIZ.filter(([k]) => !answers[k]).map(([k]) => k);
+      $$('.quiz-q', body).forEach(r => r.classList.toggle('missing', missing.includes(r.dataset.k)));
+      if (missing.length) {
+        $('#qzErr', body).textContent = `아직 고르지 않은 질문이 ${missing.length}개 있어요.`;
+        $(`.quiz-q[data-k="${missing[0]}"]`, body).scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+      paintResult();
+    });
   }
 
   function paintResult() {
@@ -484,44 +509,22 @@ function openQuiz() {
           ${good.length ? `<div class="q-good">✓ ${good.map(esc).join(' · ')}</div>` : ''}
           ${warn.length ? `<div class="q-warn">! ${warn.map(esc).join(' · ')}</div>` : ''}
         </div></a>`).join('')}</div>
-      <div class="quiz-nav-row"><button type="button" class="btn btn-sm" data-restart>다시 하기</button><a class="btn btn-sm btn-primary" href="products.html?live=1">모든 친구 둘러보기</a></div>`;
-    $('[data-restart]', body).addEventListener('click', () => { step = 0; Object.keys(answers).forEach(k => delete answers[k]); paintQ(); });
+      <div class="quiz-nav-row"><button type="button" class="btn btn-sm" data-edit>← 답 고치기</button><a class="btn btn-sm btn-primary" href="products.html?live=1">모든 친구 둘러보기</a></div>`;
+    $('[data-edit]', body).addEventListener('click', paintForm);
   }
-  paintQ();
+  paintForm();
   return wrap;
 }
 
-// 처음 방문했다면 퀴즈로 초대 + 화면 구석의 퀴즈 버튼
+// 화면 구석의 퀴즈 버튼 (누른 사람에게만 퀴즈가 열려요)
 function setupQuizInvite() {
-  if (!$('.quiz-fab')) {
-    const fab = document.createElement('button');
-    fab.type = 'button';
-    fab.className = 'quiz-fab';
-    fab.setAttribute('data-quiz', '');
-    fab.innerHTML = '<span class="fab-ico">🧩</span><span class="fab-text">나와 맞는 친구 찾기</span>';
-    document.body.appendChild(fab);
-  }
-  let seen = '1';
-  try { seen = localStorage.getItem('pet_quizSeen'); } catch (e) { /* 무시 */ }
-  const page = location.pathname.split('/').pop() || 'index.html';
-  if (!seen && ['index.html', 'products.html', ''].includes(page)) {
-    setTimeout(() => {
-      if ($('.modal-wrap')) return;
-      try { localStorage.setItem('pet_quizSeen', '1'); } catch (e) { /* 무시 */ }
-      const w = document.createElement('div');
-      w.className = 'modal-wrap';
-      w.innerHTML = `<div class="modal welcome-modal" role="dialog" aria-modal="true" aria-label="몽글에 오신 걸 환영해요">
-        <div class="welcome-paws" aria-hidden="true">🐶 🐱 🐰 🐦 🐠 🦎</div>
-        <h3>몽글에 처음 오셨나요? 💛</h3>
-        <p>10가지 질문에 답하면 <b>우리 집과 꼭 맞는 친구</b>를 찾아드려요.<br><span class="muted">1분이면 충분해요 · 결과는 참고용이에요</span></p>
-        <button type="button" class="btn btn-primary btn-lg btn-block" data-quiz>🧩 나와 맞는 친구 찾기 시작</button>
-        <button type="button" class="link-btn" data-later style="margin-top:12px">먼저 둘러볼게요</button>
-      </div>`;
-      document.body.appendChild(w);
-      const close = () => w.remove();
-      w.addEventListener('click', e => { if (e.target === w || e.target.closest('[data-later]')) close(); if (e.target.closest('[data-quiz]')) close(); });
-    }, 900);
-  }
+  if ($('.quiz-fab')) return;
+  const fab = document.createElement('button');
+  fab.type = 'button';
+  fab.className = 'quiz-fab';
+  fab.setAttribute('data-quiz', '');
+  fab.innerHTML = '<span class="fab-ico">🧩</span><span class="fab-text">나와 맞는 친구 찾기</span>';
+  document.body.appendChild(fab);
 }
 
 document.addEventListener('click', e => {
