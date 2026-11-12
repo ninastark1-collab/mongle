@@ -2,7 +2,7 @@
 const Store = {
   get(key, fallback) {
     try {
-      const v = localStorage.getItem('moa_' + key);
+      const v = localStorage.getItem('pet_' + key);
       return v === null ? fallback : JSON.parse(v);
     } catch (e) {
       return fallback;
@@ -10,14 +10,14 @@ const Store = {
   },
   set(key, value) {
     try {
-      localStorage.setItem('moa_' + key, JSON.stringify(value));
+      localStorage.setItem('pet_' + key, JSON.stringify(value));
       return true;
     } catch (e) {
       return false; // 용량 초과 등
     }
   },
   remove(key) {
-    try { localStorage.removeItem('moa_' + key); } catch (e) { /* ignore */ }
+    try { localStorage.removeItem('pet_' + key); } catch (e) { /* ignore */ }
   },
 };
 
@@ -123,6 +123,7 @@ const Cart = {
   add(id, option, qty) {
     const p = getProduct(id);
     if (!p || p.soldOut || p.status === 'hidden' || qty < 1) return 0; // 구매 불가 상품은 담지 않음
+    if (p.live) return 0; // 반려동물은 장바구니가 아니라 입양 신청서로
     const items = this.items();
     const key = id + '|' + (option || '');
     const found = items.find(i => i.key === key);
@@ -200,6 +201,8 @@ const QnA = {
 const STATUS_FLOW = ['결제완료', '배송준비중', '배송중', '배송완료', '구매확정'];
 const CANCELLABLE = ['결제완료', '배송준비중'];
 const RETURN_REASONS = ['단순 변심', '상품 불량/파손', '오배송', '상품 정보와 다름', '기타'];
+// 반려동물은 단순 변심 반품 불가. 소비자분쟁해결기준: 15일 이내 폐사·질병 시 교환/환불
+const LIVE_RETURN_REASONS = ['15일 이내 질병 발생', '15일 이내 폐사', '분양 정보와 다름'];
 const RETURN_FEE = 6000; // 단순 변심 반품 왕복 배송비 (고객 부담)
 
 const Orders = {
@@ -304,7 +307,7 @@ const Orders = {
     const all = this.all();
     const o = all.find(x => x.no === no);
     const it = o && o.items[idx];
-    if (!it || it.status !== '배송완료' || !RETURN_REASONS.includes(reason)) return false;
+    if (!it || it.status !== '배송완료' || !(it.live ? LIVE_RETURN_REASONS : RETURN_REASONS).includes(reason)) return false;
     it.status = '반품요청';
     it.returnReason = reason;
     it.returnDetail = String(detail || '').slice(0, 300);
@@ -339,7 +342,7 @@ const Orders = {
     const it = o && o.items[idx];
     if (!it || it.status !== '배송완료') return 0;
     it.status = '구매확정';
-    const pts = Math.floor(it.price * it.qty * POINT_RATE);
+    const pts = it.live ? 0 : Math.floor(it.price * it.qty * POINT_RATE);
     it.pointsEarned = pts;
     this.saveAll(all);
     Auth.addPoints(o.userEmail, pts);
@@ -363,15 +366,16 @@ const Orders = {
 // ---------- 가격 계산 ----------
 function calcTotals(lines, couponCode, pointsWanted) {
   const subtotal = lines.reduce((s, l) => s + l.product.price * l.qty, 0);
+  const couponBase = lines.filter(l => !l.product.live).reduce((s, l) => s + l.product.price * l.qty, 0); // 쿠폰은 용품에만
   const originTotal = lines.reduce((s, l) => s + Math.max(l.product.originalPrice || 0, l.product.price) * l.qty, 0);
   const allFree = lines.length > 0 && lines.every(l => l.product.freeShip);
   const shipping = lines.length === 0 || allFree || subtotal >= FREE_SHIPPING_MIN ? 0 : SHIPPING_FEE;
   let couponDiscount = 0;
   const c = couponCode ? COUPONS[couponCode] : null;
-  if (c && subtotal >= c.min) {
-    couponDiscount = c.type === 'percent' ? Math.min(Math.floor(subtotal * c.value / 100), c.max) : c.value;
+  if (c && couponBase >= c.min && couponBase > 0) {
+    couponDiscount = c.type === 'percent' ? Math.min(Math.floor(couponBase * c.value / 100), c.max) : c.value;
   }
-  couponDiscount = Math.min(couponDiscount, subtotal);
+  couponDiscount = Math.min(couponDiscount, couponBase);
   const pointsUsed = Math.max(0, Math.min(Math.floor(pointsWanted || 0), subtotal - couponDiscount));
   return {
     subtotal, originTotal, shipping, couponDiscount, pointsUsed,

@@ -499,6 +499,47 @@ h1.page-title { font-size: 30px; font-weight: 800; letter-spacing: -0.04em; marg
   .help-grid { grid-template-columns: 1fr; }
 }
 
+/* ---------------- v8: 펫샵 ---------------- */
+.hero-pics { position: absolute; right: 26px; top: 30px; bottom: 30px; width: 44%; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; pointer-events: none; }
+.hero-pics img { width: 100%; height: 100%; object-fit: cover; border-radius: 22px; box-shadow: 0 18px 40px -18px rgba(0,0,0,.6); animation: float 7s ease-in-out infinite; }
+.hero-pics img:nth-child(2) { animation-delay: -2s; transform: translateY(18px); }
+.hero-pics img:nth-child(3) { animation-delay: -4s; }
+.hero-pics img:nth-child(4) { animation-delay: -1s; }
+.bento-main > div:first-child, .bento-main .cta { max-width: 52%; }
+.cat-grid.cat-8 { grid-template-columns: repeat(8, 1fr); }
+.cat-item small { display: block; font-size: 12px; }
+.pet-meta { font-size: 12px; color: var(--forest); font-weight: 600; }
+.pet-info { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; margin: 14px 0; }
+.pet-info div { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-size: 13px; }
+.pet-info b { display: block; font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 2px; }
+.live-note { background: var(--primary-soft); border-radius: 16px; padding: 14px 16px; font-size: 13px; line-height: 1.6; margin: 12px 0; }
+.live-note strong { color: var(--forest); }
+@media (max-width: 1024px) { .cat-grid.cat-8 { grid-template-columns: repeat(4, 1fr); row-gap: 18px; } }
+@media (max-width: 640px) {
+  .hero-pics { position: static; width: 100%; height: 220px; margin-top: 22px; }
+  .bento-main > div:first-child, .bento-main .cta { max-width: none; }
+  .bento-main { display: flex; }
+}
+
+/* ---------------- v9: 책임 분양 ---------------- */
+.pet-note { font-size: 13px; color: #4a504c; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.adopt-fee { font-size: 15px; font-weight: 700; margin-top: 2px; }
+.adopt-fee span { font-size: 12px; font-weight: 600; color: var(--muted); margin-right: 2px; }
+.tag-wait { background: var(--primary-soft); color: var(--forest); }
+.tag-home { background: #fff4d6; color: #8a5a00; }
+.adopt-form .q { margin-bottom: 16px; }
+.adopt-form .q > label:first-child, .adopt-form .q > .q-title { display: block; font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+.choice-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.choice-row label { border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-size: 13px; cursor: pointer; display: flex; gap: 6px; align-items: center; background: var(--surface); }
+.choice-row label:has(input:checked) { border-color: var(--forest); background: var(--primary-soft); color: var(--forest); font-weight: 700; }
+.choice-row input { accent-color: var(--forest); }
+.promise { background: var(--primary-soft); border-radius: 18px; padding: 18px 20px; }
+.promise h3 { margin: 0 0 8px; font-size: 16px; color: var(--forest); }
+.promise ol { margin: 0 0 12px; padding-left: 20px; font-size: 14px; line-height: 1.8; }
+.breeder-msg { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--forest); border-radius: 14px; padding: 14px 16px; margin: 14px 0; font-size: 14px; line-height: 1.6; }
+.adopt-steps .card { gap: 8px; }
+.breeder-msg b { display: block; font-size: 12px; color: var(--forest); margin-bottom: 4px; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

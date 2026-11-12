@@ -31,9 +31,12 @@ function stars(rating) {
   return '<span class="stars" aria-label="별점 ' + rating + '점">' + '★'.repeat(full) + '☆'.repeat(5 - full) + '</span>';
 }
 
-// 판매자 업로드 이미지는 data:image 만 허용
+// 이미지: 판매자 업로드(data:image) 또는 Unsplash 무료 사진만 허용
 function safeImage(src) {
-  return typeof src === 'string' && /^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(src) ? src : '';
+  if (typeof src !== 'string') return '';
+  if (/^data:image\/(png|jpe?g|webp|gif);base64,[a-z0-9+/=]+$/i.test(src)) return src;
+  if (/^https:\/\/images\.unsplash\.com\/photo-[\w-]+\?[\w=&.%-]*$/.test(src)) return src;
+  return '';
 }
 
 function thumb(p, size = '') {
@@ -42,7 +45,7 @@ function thumb(p, size = '') {
   const g = p.gradient && hex(p.gradient[0]) && hex(p.gradient[1]) ? p.gradient : ['#f1f5f9', '#e2e8f0'];
   return `<div class="thumb ${size}" style="background:linear-gradient(135deg, ${g[0]}, ${g[1]})">
     ${img ? `<img src="${img}" alt="${esc(p.name)}" loading="lazy">` : `<span class="emoji" role="img" aria-label="${esc(p.name)}">${esc(p.emoji || '📦')}</span>`}
-    ${p.soldOut ? '<span class="soldout-cover">일시품절</span>' : ''}</div>`;
+    ${p.soldOut ? `<span class="soldout-cover">${p.live ? '💛 새 가족을 만났어요' : '일시품절'}</span>` : ''}</div>`;
 }
 
 function priceBlock(p) {
@@ -50,7 +53,33 @@ function priceBlock(p) {
     <div class="price-line">${p.discount ? `<span class="discount">${p.discount}%</span>` : ''}<span class="price">${won(p.price)}</span></div>`;
 }
 
+// 진행 단계 이름: 반려동물은 입양 절차로 표시
+const ADOPT_STEPS = { 결제완료: '입양 신청 접수', 배송준비중: '분양자 검토·승인', 배송중: '인계 준비', 배송완료: '새 가족 품으로', 구매확정: '입양 완료', 주문취소: '신청 취소', 반품요청: '건강보증 접수', 반품완료: '건강보증 처리 완료' };
+function statusLabel(status, live) { return live ? ADOPT_STEPS[status] || status : status; }
+
+function petCard(p) {
+  const wished = Wish.has(p.id);
+  return `<div class="pcard ${p.soldOut ? 'is-soldout' : ''}">
+    <button class="wish-btn" data-wish="${p.id}" aria-label="관심 친구로 저장" aria-pressed="${wished}">${wished ? '❤️' : '🤍'}</button>
+    <a href="product.html?id=${p.id}">
+      <div class="thumb-wrap">${thumb(p)}</div>
+      <div class="info">
+        <div class="name">${esc(p.name)}</div>
+        ${p.pet ? `<div class="pet-meta">${esc(p.pet.age)} · ${esc(p.pet.care)}</div>` : ''}
+        ${p.pet && p.pet.note ? `<div class="pet-note">“${esc(p.pet.note)}”</div>` : ''}
+        <div class="adopt-fee"><span>분양비</span> ${won(p.price)}</div>
+        <div class="tags">
+          ${p.soldOut ? '<span class="tag tag-home">💛 가족을 찾았어요</span>' : '<span class="tag tag-wait">🏡 가족을 기다려요</span>'}
+          <span class="tag tag-free">🩺 15일 건강보증</span>
+        </div>
+        ${p.sellerEmail ? `<div class="seller-name">분양자 · ${esc(p.seller)}</div>` : ''}
+      </div>
+    </a>
+  </div>`;
+}
+
 function productCard(p, i, opts) {
+  if (p.live) return petCard(p);
   const rank = opts && opts.rank ? i + 1 : 0;
   const wished = Wish.has(p.id);
   return `<div class="pcard ${p.soldOut ? 'is-soldout' : ''}">
@@ -62,10 +91,12 @@ function productCard(p, i, opts) {
         <div class="name">${esc(p.name)}</div>
         ${priceBlock(p)}
         <div class="rating">${p.reviewCount ? `${stars(p.avgRating)} (${p.reviewCount.toLocaleString()})` : '<span class="muted">NEW</span>'}</div>
+        ${p.live && p.pet ? `<div class="pet-meta">${esc(p.pet.age)} · ${esc(p.pet.care)}</div>` : ''}
         <div class="tags">
-          ${p.fast ? '<span class="tag tag-fast">🚀 내일도착</span>' : ''}
-          ${p.freeShip ? '<span class="tag tag-free">무료배송</span>' : ''}
-          ${!p.soldOut && p.stock <= 5 ? `<span class="tag tag-low">${p.stock}개 남음</span>` : ''}
+          ${p.live ? '<span class="tag tag-fast">🩺 건강보증 15일</span><span class="tag tag-free">직접 인계</span>' : ''}
+          ${!p.live && p.fast ? '<span class="tag tag-fast">🚀 내일도착</span>' : ''}
+          ${!p.live && p.freeShip ? '<span class="tag tag-free">무료배송</span>' : ''}
+          ${!p.soldOut && p.stock <= (p.live ? 1 : 5) ? `<span class="tag tag-low">${p.live ? '마지막 1마리' : p.stock + '개 남음'}</span>` : ''}
         </div>
         ${p.sellerEmail ? `<div class="seller-name">${esc(p.seller)}</div>` : ''}
       </div>
@@ -85,7 +116,7 @@ document.addEventListener('click', e => {
   }
   btn.textContent = on ? '❤️' : '🤍';
   btn.setAttribute('aria-pressed', on);
-  toast(on ? '찜 목록에 추가했어요.' : '찜 목록에서 삭제했어요.', on ? 'mypage.html?tab=wish' : '', '찜 목록');
+  toast(on ? '관심 목록에 담았어요. 💛' : '관심 목록에서 뺐어요.', on ? 'mypage.html?tab=wish' : '', '관심 목록');
 });
 
 let toastTimer;
@@ -167,19 +198,19 @@ function renderHeader() {
       : `<a href="${loginUrl()}">로그인</a><a href="signup.html">회원가입</a>`}
     <a href="mypage.html">주문조회</a>
     <a href="help.html">고객센터</a>
-    <a href="seller.html" class="seller-link">셀러센터 ↗</a>
+    <a href="seller.html" class="seller-link">분양자·셀러센터 ↗</a>
   </div></div>
   <header class="header">
     <div class="container header-main">
       <a href="index.html" class="logo" aria-label="PIKK 홈">${LOGO}</a>
       <form class="search" action="products.html" role="search" id="searchForm" autocomplete="off">
-        <input name="q" id="searchInput" type="search" placeholder="오늘의 픽을 찾아보세요" value="${esc(q)}" aria-label="상품 검색" maxlength="50">
+        <input name="q" id="searchInput" type="search" placeholder="어떤 친구를 찾고 있나요? 🐾" value="${esc(q)}" aria-label="상품 검색" maxlength="50">
         <button type="submit" aria-label="검색">${ICON.search}</button>
         <div class="suggest hidden" id="suggest"></div>
       </form>
       <nav class="header-icons">
         ${user ? `<div class="noti-wrap"><button type="button" class="icon-btn" id="notiBtn" aria-label="알림" aria-expanded="false">${ICON.bell}<span class="label">알림</span><span id="notiCount" class="badge-count hidden">0</span></button><div class="noti-panel hidden" id="notiPanel"></div></div>` : ''}
-        <a href="mypage.html?tab=wish" aria-label="찜">${ICON.heart}<span class="label">찜</span></a>
+        <a href="mypage.html?tab=wish" aria-label="관심 친구">${ICON.heart}<span class="label">관심</span></a>
         <a href="mypage.html" aria-label="마이페이지">${ICON.user}<span class="label">MY</span></a>
         <a href="cart.html" aria-label="장바구니">${ICON.bag}<span class="label">장바구니</span><span id="cartCount" class="badge-count hidden">0</span></a>
       </nav>
@@ -187,7 +218,7 @@ function renderHeader() {
     <nav class="catnav"><div class="container">
       <a href="products.html" class="${page === 'products.html' && !cat && !q && sort !== 'discount' ? 'active' : ''}">전체</a>
       ${CATEGORIES.map(c => `<a href="products.html?cat=${c.id}" class="${cat === c.id ? 'active' : ''}">${c.name}</a>`).join('')}
-      <a href="products.html?sort=discount" class="hot ${sort === 'discount' && !cat && !q ? 'active' : ''}">특가 SALE</a>
+      <a href="products.html?sort=discount" class="hot ${sort === 'discount' && !cat && !q ? 'active' : ''}">용품 SALE</a>
       <a href="products.html?sort=new" class="${sort === 'new' && !cat && !q ? 'active' : ''}">신상</a>
     </div></nav>
   </header>`;
@@ -306,12 +337,12 @@ function renderFooter() {
   $('#footer').outerHTML = `
   <footer class="footer" id="footer"><div class="container">
     <div class="footer-cols">
-      <div><strong>${LOGO}</strong>오늘의 픽, 내일 문 앞에.<br>오늘 담고, 내일 받는 라이프스타일 마켓.</div>
+      <div><strong>${LOGO}</strong>오늘의 픽, 평생의 가족.<br>정성껏 키워주실 분께, 정성껏 보내드려요.</div>
       <div><strong>고객센터</strong>1588-0000<br>평일 09:00–18:00<br><a href="help.html">자주 묻는 질문 · 공지 →</a></div>
-      <div><strong>쇼핑 혜택</strong>${won(FREE_SHIPPING_MIN)} 이상 무료배송<br>구매확정 ${POINT_RATE * 100}% 적립 · 가입 2,000P</div>
-      <div><strong>셀러</strong><a href="seller.html">수수료 0%로 입점하기 →</a></div>
+      <div><strong>책임 분양</strong>입양 신청서 검토 후 분양 · 15일 건강보증<br>생명은 택배 없이 직접 인계 · 동물판매업 등록 (데모)</div>
+      <div><strong>분양자·브리더</strong><a href="seller.html">책임 분양 함께하기 →</a><br>용품 ${won(FREE_SHIPPING_MIN)} 이상 무료배송</div>
     </div>
-    <div class="notice">⚠️ 학습용 데모 사이트입니다. 실제 결제·배송이 이루어지지 않으며, 회원·주문·상품 정보는 이 브라우저(localStorage)에만 저장됩니다. 실제 사용하는 비밀번호를 입력하지 마세요.</div>
+    <div class="notice">⚠️ 학습용 데모 사이트입니다. 실제 결제·배송이 이루어지지 않으며, 회원·주문·상품 정보는 이 브라우저(localStorage)에만 저장됩니다. 실제 분양이 아니며, 상품 사진은 Unsplash 무료 라이선스 이미지입니다. 실제 사용하는 비밀번호를 입력하지 마세요.</div>
     <div class="footer-bottom"><span>© 2026 PIKK. All rights reserved.</span><button class="link-btn" id="toTop" type="button">맨 위로 ↑</button></div>
     <div class="wordmark" aria-hidden="true">PIKK<i>.</i></div>
   </div></footer>`;

@@ -1,6 +1,6 @@
 (function () {
   if (!Auth.require()) return;
-  const EMOJIS = ['📦', '👕', '👗', '👟', '👜', '💄', '🧴', '🍎', '🍪', '☕', '💻', '📱', '🎧', '🏠', '🍳', '🧸', '📚', '⚽', '🌱', '🐶'];
+  const EMOJIS = ['🐶', '🐱', '🐹', '🐰', '🦔', '🐦', '🦜', '🐠', '🐟', '🦐', '🦎', '🐍', '🐢', '🪲', '🦀', '🦴', '🛏️', '🥣', '🧸', '📦'];
   const TABS = [['dash', '대시보드'], ['products', '상품관리'], ['new', '+ 상품등록'], ['orders', '주문/배송'], ['qna', '상품문의'], ['store', '스토어정보']];
   let tab = TABS.some(t => t[0] === param('tab')) ? param('tab') : 'dash';
   let editId = param('edit') ? Number(param('edit')) : null;
@@ -155,10 +155,22 @@
   function formHtml() {
     const p = editId ? myProducts().find(x => x.id === editId) : null;
     if (editId && !p) { editId = null; }
-    const v = p || { name: '', category: 'fashion', price: '', originalPrice: '', stock: 100, options: [], emoji: '📦', fast: false, freeShip: true, description: '', image: '' };
+    const v = p || { name: '', category: 'dog', price: '', originalPrice: '', stock: 1, options: [], emoji: '🐶', fast: false, freeShip: true, description: '', image: '', live: true, pet: {} };
+    const pet = v.pet || {};
     return `<h1 class="page-title" style="margin-top:0">${p ? '상품 수정' : '상품 등록'}</h1>
       <form id="pForm" novalidate>
         <div class="form-grid">
+          <div class="field full"><label class="check"><input type="checkbox" id="pLive" ${v.live ? 'checked' : ''}> 🐾 살아있는 반려동물 분양 (체크 해제 시 일반 용품)</label></div>
+          <div class="field full pet-fields ${v.live ? '' : 'hidden'}">
+            <div class="form-grid">
+              <div class="field"><label for="pAge">나이 *</label><input class="input" id="pAge" maxlength="20" value="${esc(pet.age || '')}" placeholder="예: 3개월"><div class="error-text" data-err="age"></div></div>
+              <div class="field"><label for="pHealth">건강·접종 *</label><input class="input" id="pHealth" maxlength="40" value="${esc(pet.health || '')}" placeholder="예: 종합백신 2차 · 구충 완료"><div class="error-text" data-err="health"></div></div>
+              <div class="field"><label for="pLife">평균 수명</label><input class="input" id="pLife" maxlength="20" value="${esc(pet.lifespan || '')}" placeholder="예: 12~15년"></div>
+              <div class="field"><label for="pSize">다 자란 크기</label><input class="input" id="pSize" maxlength="40" value="${esc(pet.size || '')}" placeholder="예: 3kg 소형견"></div>
+              <div class="field"><label for="pCare">키우기 난이도</label><select class="select" id="pCare">${Object.values(CARE).map(c => `<option ${c === pet.care ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
+            </div>
+            <p class="muted" style="font-size:12px;margin:0">강아지·고양이는 생후 2개월 이상만 분양할 수 있고, 동물판매업 등록이 필요해요. 국제 거래 규제(CITES) 종과 생태계교란종은 등록할 수 없어요.</p>
+          </div>
           <div class="field full"><label for="pName">상품명 *</label><input class="input" id="pName" maxlength="60" value="${esc(v.name)}" placeholder="예: 제주 감귤 5kg 가정용"><div class="error-text" data-err="name"></div></div>
           <div class="field"><label for="pCat">카테고리 *</label><select class="select" id="pCat">${CATEGORIES.map(c => `<option value="${c.id}" ${c.id === v.category ? 'selected' : ''}>${c.icon} ${c.name}</option>`).join('')}</select></div>
           <div class="field"><label for="pStock">재고 수량 *</label><input class="input" id="pStock" type="number" min="0" max="9999" value="${v.stock}"><div class="error-text" data-err="stock"></div></div>
@@ -199,6 +211,7 @@
       const pr = Number($('#pPrice').value), or = Number($('#pOrigin').value);
       $('#discPreview').textContent = pr > 0 && or > pr ? `할인율 ${Math.round((1 - pr / or) * 100)}% 로 표시돼요.` : '';
     };
+    $('#pLive').addEventListener('change', e => $('.pet-fields').classList.toggle('hidden', !e.target.checked));
     $('#pPrice').addEventListener('input', disc);
     $('#pOrigin').addEventListener('input', disc);
     disc();
@@ -241,13 +254,21 @@
         description: $('#pDesc').value.trim(),
         fast: $('#pFast').checked,
         freeShip: $('#pFree').checked,
+        live: $('#pLive').checked,
       };
+      if (f.live) {
+        f.pet = { age: $('#pAge').value.trim(), health: $('#pHealth').value.trim(), lifespan: $('#pLife').value.trim() || '-', size: $('#pSize').value.trim() || '-', care: $('#pCare').value };
+        f.freeShip = true; f.fast = false;
+      }
       const err = {};
       if (f.name.length < 2) err.name = '상품명을 2자 이상 입력해 주세요.';
       if (!Number.isFinite(f.price) || f.price < 100 || f.price > 100000000) err.price = '판매가는 100원 ~ 1억원 사이로 입력해 주세요.';
       if (f.originalPrice && f.originalPrice < f.price) err.origin = '정가는 판매가보다 크거나 같아야 해요.';
       if (!Number.isInteger(f.stock) || f.stock < 0 || f.stock > 9999) err.stock = '재고는 0 ~ 9999 사이 정수로 입력해 주세요.';
       if (f.description.length < 10) err.desc = '상세 설명을 10자 이상 입력해 주세요.';
+      if (f.live && !f.pet.age) err.age = '나이를 입력해 주세요.';
+      if (f.live && !f.pet.health) err.health = '건강·접종 정보를 입력해 주세요.';
+      if (f.live && f.category === 'supplies') err.name = '반려동물은 용품·사료가 아닌 동물 분류를 골라 주세요.';
       $$('[data-err]').forEach(el => { el.textContent = err[el.dataset.err] || ''; });
       if (Object.keys(err).length) { $('.error-text:not(:empty)').scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
 
@@ -280,9 +301,9 @@
         <td style="font-size:12px">${esc(o.no)}</td>
         <td>${esc(it.name)}${it.option ? `<div class="muted" style="font-size:12px">${esc(it.option)}</div>` : ''}<div class="muted" style="font-size:12px">${it.qty}개</div></td>
         <td style="white-space:nowrap">${won(it.price * it.qty)}</td>
-        <td style="font-size:13px">${esc(o.address.name)} ${esc(o.address.phone)}<div class="muted">[${esc(o.address.zip)}] ${esc(o.address.addr1)} ${esc(o.address.addr2)}</div><div class="muted">요청: ${esc(o.memo)}</div></td>
-        <td><span class="status s-${it.status}">${it.status}</span>${it.tracking ? `<div class="muted" style="font-size:11px">송장 ${esc(it.tracking)}</div>` : ''}${it.returnReason ? `<div class="muted" style="font-size:11px">사유: ${esc(it.returnReason)}${it.returnDetail ? ' · ' + esc(it.returnDetail) : ''}</div>` : ''}</td>
-        ${withActions ? `<td>${NEXT[it.status] ? `<button class="btn btn-sm btn-primary" data-next="${esc(o.no)}" data-idx="${idx}" data-from="${it.status}">${NEXT[it.status][1]}</button>` : '<span class="muted" style="font-size:12px">-</span>'}</td>` : ''}
+        <td style="font-size:13px">${o.application && it.live ? `<div style="margin-bottom:4px"><b>💌 입양 신청서</b> ${esc(o.application.home)} · ${esc(o.application.experience)} · 혼자 ${esc(o.application.alone)}<div class="muted">“${esc(o.application.why)}”</div></div>` : ''}${esc(o.address.name)} ${esc(o.address.phone)}<div class="muted">[${esc(o.address.zip)}] ${esc(o.address.addr1)} ${esc(o.address.addr2)}</div><div class="muted">요청: ${esc(o.memo)}</div></td>
+        <td><span class="status s-${it.status}">${statusLabel(it.status, it.live)}</span>${it.tracking ? `<div class="muted" style="font-size:11px">송장 ${esc(it.tracking)}</div>` : ''}${it.returnReason ? `<div class="muted" style="font-size:11px">사유: ${esc(it.returnReason)}${it.returnDetail ? ' · ' + esc(it.returnDetail) : ''}</div>` : ''}</td>
+        ${withActions ? `<td>${NEXT[it.status] ? `<button class="btn btn-sm btn-primary" data-next="${esc(o.no)}" data-idx="${idx}" data-from="${it.status}">${it.live ? ({ 결제완료: '신청서 검토·승인', 배송준비중: '인계 출발', 배송중: '인계 완료', 반품요청: '건강보증 승인' })[it.status] : NEXT[it.status][1]}</button>` : '<span class="muted" style="font-size:12px">-</span>'}</td>` : ''}
       </tr>`).join('')}</tbody></table></div>`;
   }
   function ordersHtml() {

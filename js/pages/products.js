@@ -4,10 +4,14 @@
     cat: param('cat') || '',
     sort: param('sort') || 'recommend',
     fast: param('fast') === '1',
+    live: param('live') === '1',
+    easy: param('care') === 'easy',
     free: false,
     min: '',
     max: '',
   };
+  const ANIMAL_SORTS = ['recommend', 'new', 'reviews'];
+  const isAnimalView = () => state.live || (state.cat && state.cat !== 'supplies');
   const SORTS = [
     ['recommend', '추천순'], ['new', '최신순'], ['discount', '할인율순'], ['low', '낮은가격순'], ['high', '높은가격순'], ['reviews', '리뷰많은순'], ['rating', '평점높은순'],
   ];
@@ -22,6 +26,8 @@
       if (state.cat && p.category !== state.cat) return false;
       if (q && !q.split(/\s+/).every(w => (p.name + ' ' + getCategory(p.category).name + ' ' + p.seller).toLowerCase().includes(w))) return false;
       if (state.fast && !p.fast) return false;
+      if (state.live && !p.live) return false;
+      if (state.easy && !(p.pet && p.pet.care === '초보 추천')) return false;
       if (state.free && !p.freeShip) return false;
       if (state.min !== '' && p.price < Number(state.min)) return false;
       if (state.max !== '' && p.price > Number(state.max)) return false;
@@ -43,6 +49,8 @@
   function title() {
     if (state.q) return `'${esc(state.q)}' 검색 결과`;
     if (state.cat) return getCategory(state.cat)?.name || '전체 상품';
+    if (state.easy) return '🌱 초보 추천 친구들';
+    if (state.live) return '🏡 가족을 기다리는 친구들';
     if (state.sort === 'discount') return '🔥 오늘의 특가';
     return '전체 상품';
   }
@@ -53,6 +61,8 @@
     if (state.cat) sp.set('cat', state.cat);
     if (state.sort !== 'recommend') sp.set('sort', state.sort);
     if (state.fast) sp.set('fast', '1');
+    if (state.live) sp.set('live', '1');
+    if (state.easy) sp.set('care', 'easy');
     history.replaceState(null, '', 'products.html' + (sp.toString() ? '?' + sp : ''));
   }
 
@@ -71,7 +81,11 @@
           ${catLink('', '전체')}
           ${CATEGORIES.map(c => catLink(c.id, c.icon + ' ' + c.name)).join('')}
         </div>
-        <div class="group"><h3>배송</h3>
+        <div class="group"><h3>분양</h3>
+          <label class="check"><input type="checkbox" id="fLive" ${state.live ? 'checked' : ''}> 🏡 가족을 기다리는 친구만</label>
+          <label class="check" style="margin-top:8px"><input type="checkbox" id="fEasy" ${state.easy ? 'checked' : ''}> 🌱 초보 추천만</label>
+        </div>
+        <div class="group"><h3>용품 배송</h3>
           <label class="check"><input type="checkbox" id="fFast" ${state.fast ? 'checked' : ''}> 🚀 내일도착만</label>
           <label class="check" style="margin-top:8px"><input type="checkbox" id="fFree"> 무료배송만</label>
         </div>
@@ -93,8 +107,14 @@
   function render() {
     const list = filtered();
     $('#title').innerHTML = title();
-    $('#count').textContent = `총 ${list.length}개 상품`;
-    $$('[data-sort]').forEach(b => b.classList.toggle('active', b.dataset.sort === state.sort));
+    $('#count').textContent = `총 ${list.length}${list.every(p => p.live) && list.length ? '마리' : '개'}`;
+    // 동물 목록에서는 가격·할인 정렬 대신 추천·최신·후기순만
+    if (isAnimalView() && !ANIMAL_SORTS.includes(state.sort)) state.sort = 'recommend';
+    $$('[data-sort]').forEach(b => {
+      b.classList.toggle('active', b.dataset.sort === state.sort);
+      b.classList.toggle('hidden', isAnimalView() && !ANIMAL_SORTS.includes(b.dataset.sort));
+      if (b.dataset.sort === 'reviews') b.textContent = isAnimalView() ? '입양후기순' : '리뷰많은순';
+    });
     $('#results').innerHTML = list.length
       ? `<div class="grid">${list.slice(0, shown).map(productCard).join('')}</div>
          ${list.length > shown ? `<button class="btn load-more" id="more">상품 더보기 (${shown}/${list.length})</button>` : ''}`
@@ -108,6 +128,8 @@
   $$('[data-sort]').forEach(b => b.addEventListener('click', () => { state.sort = b.dataset.sort; reset(); render(); }));
   $('#fFast').addEventListener('change', e => { state.fast = e.target.checked; reset(); render(); });
   $('#fFree').addEventListener('change', e => { state.free = e.target.checked; reset(); render(); });
+  $('#fLive').addEventListener('change', e => { state.live = e.target.checked; reset(); render(); });
+  $('#fEasy').addEventListener('change', e => { state.easy = e.target.checked; if (e.target.checked) { state.live = true; $('#fLive').checked = true; } reset(); render(); });
   $('#fApply').addEventListener('click', () => {
     let mn = $('#fMin').value, mx = $('#fMax').value;
     if (mn !== '' && mx !== '' && Number(mn) > Number(mx)) { [mn, mx] = [mx, mn]; $('#fMin').value = mn; $('#fMax').value = mx; }

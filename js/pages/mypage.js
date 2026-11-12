@@ -1,6 +1,6 @@
 (function () {
   if (!Auth.require()) return;
-  const TABS = [['orders', '주문내역'], ['coupons', '쿠폰함'], ['wish', '찜한 상품'], ['recent', '최근 본 상품'], ['address', '배송지 관리'], ['qna', '내 문의'], ['profile', '회원정보']];
+  const TABS = [['orders', '입양·주문 내역'], ['coupons', '쿠폰함'], ['wish', '관심 친구·상품'], ['recent', '최근 본 상품'], ['address', '배송지 관리'], ['qna', '내 문의'], ['profile', '회원정보']];
   let tab = TABS.some(t => t[0] === param('tab')) ? param('tab') : 'orders';
   let orderFilter = '전체';
 
@@ -23,8 +23,8 @@
       return `
       <div class="order">
         <div class="order-head">
-          <div><strong>${fmtDate(o.date)} 주문</strong> <span class="muted" style="font-size:13px">· ${esc(o.no)}</span></div>
-          <span class="status s-${st}">${st}</span>
+          <div><strong>${fmtDate(o.date)} ${o.items.some(i => i.live) ? '입양 신청' : '주문'}</strong> <span class="muted" style="font-size:13px">· ${esc(o.no)}</span></div>
+          <span class="status s-${st}">${statusLabel(st, o.items.some(i => i.live))}</span>
         </div>
         ${o.items.map((i, idx) => {
           const p = getProduct(i.id);
@@ -33,12 +33,12 @@
               ${i.tracking && i.status !== '주문취소' ? `<div class="muted" style="font-size:12px">🚚 송장 ${esc(i.tracking)}</div>` : ''}
               ${i.status === '반품요청' ? `<div class="muted" style="font-size:12px">↩️ 반품 사유: ${esc(i.returnReason)} · ${i.sellerEmail ? '판매자 확인 중' : '곧 자동 승인돼요 (데모)'}</div>` : ''}
               ${i.refund ? `<div class="muted" style="font-size:12px">💸 환불 ${won(i.refund.cash)}${i.refund.points ? ` + ${i.refund.points.toLocaleString()}P` : ''}${i.refund.fee ? ` (반품배송비 ${won(i.refund.fee)} 차감)` : ''}</div>` : ''}</div>
-            <div style="text-align:right"><span class="status s-${i.status}">${i.status}</span>
+            <div style="text-align:right"><span class="status s-${i.status}">${statusLabel(i.status, i.live)}</span>
               <div class="item-actions">
-                ${i.status === '배송완료' ? `<button class="btn btn-sm btn-primary" data-confirm="${esc(o.no)}" data-idx="${idx}">구매확정</button><button class="btn btn-sm" data-return="${esc(o.no)}" data-idx="${idx}">반품신청</button>` : ''}
-                ${['배송완료', '구매확정'].includes(i.status) && !i.reviewed && p ? `<button class="btn btn-sm btn-outline" data-review="${esc(o.no)}" data-idx="${idx}">리뷰쓰기</button>` : ''}
+                ${i.status === '배송완료' ? `<button class="btn btn-sm btn-primary" data-confirm="${esc(o.no)}" data-idx="${idx}" data-live="${i.live ? 1 : ''}">${i.live ? '입양 완료' : '구매확정'}</button><button class="btn btn-sm" data-return="${esc(o.no)}" data-idx="${idx}">${i.live ? '건강보증 신청' : '반품신청'}</button>` : ''}
+                ${['배송완료', '구매확정'].includes(i.status) && !i.reviewed && p ? `<button class="btn btn-sm btn-outline" data-review="${esc(o.no)}" data-idx="${idx}">${i.live ? '입양 후기' : '리뷰쓰기'}</button>` : ''}
                 ${i.reviewed ? '<span class="muted" style="font-size:12px">리뷰 작성완료</span>' : ''}
-                ${['배송완료', '구매확정'].includes(i.status) && p && p.status !== 'hidden' && !p.soldOut ? `<button class="btn btn-sm" data-rebuy="${i.id}" data-opt="${esc(i.option)}">재구매</button>` : ''}
+                ${!i.live && ['배송완료', '구매확정'].includes(i.status) && p && p.status !== 'hidden' && !p.soldOut ? `<button class="btn btn-sm" data-rebuy="${i.id}" data-opt="${esc(i.option)}">재구매</button>` : ''}
               </div>
             </div></div>`;
         }).join('')}
@@ -160,7 +160,7 @@
           <div class="profile"><strong>${esc(u.name)}</strong>님
             <div class="muted" style="font-size:13px">적립금 <b style="color:var(--primary)">${won(u.points)}</b></div>
             <div class="muted" style="font-size:13px">주문 ${orders.length}건 · 찜 ${Wish.list().length}개 · 쿠폰 ${CouponBox.usable().length}장</div>
-            ${toConfirm ? `<div class="free-hint" style="margin-bottom:0">구매확정 대기 ${toConfirm}건</div>` : ''}
+            ${toConfirm ? `<div class="free-hint" style="margin-bottom:0">입양 완료·구매확정 대기 ${toConfirm}건</div>` : ''}
           </div>
           ${TABS.map(([k, v]) => `<button data-tab="${k}" class="${k === tab ? 'active' : ''}">${v}</button>`).join('')}
         </aside>
@@ -190,12 +190,14 @@
       },
     })));
     $$('[data-confirm]').forEach(b => b.addEventListener('click', () => modal({
-      title: '구매확정',
-      body: '<p>상품을 잘 받으셨나요?<br><span class="muted" style="font-size:13px">구매확정 후에는 교환·반품 신청이 어려워요.</span></p>',
-      okText: '구매확정',
+      title: b.dataset.live ? '입양 완료' : '구매확정',
+      body: b.dataset.live
+        ? '<p>새 가족과 잘 지내고 있나요? 💛<br><span class="muted" style="font-size:13px">입양 완료 후에는 건강보증 신청이 어려워요. 15일 동안 건강하게 지냈는지 확인 후 눌러주세요.</span></p>'
+        : '<p>상품을 잘 받으셨나요?<br><span class="muted" style="font-size:13px">구매확정 후에는 교환·반품 신청이 어려워요.</span></p>',
+      okText: b.dataset.live ? '입양 완료' : '구매확정',
       onOk: () => {
         const pts = Orders.confirm(b.dataset.confirm, Number(b.dataset.idx));
-        toast(`구매확정 완료! 적립금 ${won(pts)}이 적립되었어요.`);
+        toast(b.dataset.live ? '입양을 축하해요! 오래오래 행복하세요. 💛' : `구매확정 완료! 적립금 ${won(pts)}이 적립되었어요.`);
         renderHeader(); render();
       },
     })));
@@ -253,11 +255,12 @@
       return `예상 환불액 <b>${won(r.cash)}</b>${r.points ? ` + 적립금 ${r.points.toLocaleString()}P` : ''}${r.fee ? `<br><span class="muted">단순 변심은 왕복 배송비 ${won(r.fee)}이 차감돼요.</span>` : ''}`;
     };
     const w = modal({
-      title: '반품 신청',
+      title: it.live ? '건강보증 신청' : '반품 신청',
       body: `<p style="margin-top:0"><b>${esc(it.name)}</b> · ${it.qty}개</p>
-        <div class="field"><label for="rtReason">반품 사유</label><select class="select" id="rtReason">${RETURN_REASONS.map(r => `<option>${r}</option>`).join('')}</select></div>
+        <div class="field"><label for="rtReason">반품 사유</label><select class="select" id="rtReason">${(it.live ? LIVE_RETURN_REASONS : RETURN_REASONS).map(r => `<option>${r}</option>`).join('')}</select></div>
         <textarea class="input" id="rtText" rows="3" maxlength="300" placeholder="자세한 내용을 적어주세요 (선택)"></textarea>
-        <div class="free-hint" id="rtPreview">${preview(RETURN_REASONS[0])}</div>
+        <div class="free-hint" id="rtPreview">${preview((it.live ? LIVE_RETURN_REASONS : RETURN_REASONS)[0])}</div>
+        ${it.live ? '<p class="muted" style="font-size:12px;margin:0 0 6px">반려동물은 단순 변심 반품이 안 돼요. 인계 후 15일 이내 질병·폐사, 분양 정보와 다른 경우에만 신청할 수 있고, 수의사 진단서가 필요해요. (데모)</p>' : ''}
         <p class="muted" style="font-size:12px;margin:0">수거 기사님이 1~2일 안에 방문해요. 판매자가 확인하면 결제 수단으로 환불됩니다. (데모)</p>`,
       okText: '반품 신청',
       onOk: wrap => {
