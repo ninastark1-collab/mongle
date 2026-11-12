@@ -1,7 +1,7 @@
 (function () {
   if (!Auth.require()) return;
   const EMOJIS = ['🐶', '🐱', '🐹', '🐰', '🦔', '🐦', '🦜', '🐠', '🐟', '🦐', '🦎', '🐍', '🐢', '🪲', '🦀', '🦴', '🛏️', '🥣', '🧸', '📦'];
-  const TABS = [['dash', '대시보드'], ['products', '상품관리'], ['new', '+ 상품등록'], ['orders', '주문/배송'], ['qna', '상품문의'], ['store', '스토어정보']];
+  const TABS = [['dash', '대시보드'], ['products', '친구·용품 관리'], ['new', '+ 새로 소개하기'], ['orders', '입양·배송 관리'], ['qna', '문의'], ['store', '스토어정보']];
   let tab = TABS.some(t => t[0] === param('tab')) ? param('tab') : 'dash';
   let editId = param('edit') ? Number(param('edit')) : null;
   let orderFilter = '전체';
@@ -57,7 +57,7 @@
         <aside class="card my-menu">
           ${TABS.map(([k, v]) => `<button data-tab="${k}" class="${k === tab ? 'active' : ''}">${v}${k === 'orders' ? badge(newOrders) : k === 'qna' ? badge(openQna) : ''}</button>`).join('')}
           <hr style="border:0;border-top:1px solid var(--line)">
-          <a class="btn btn-sm btn-block" href="index.html">쇼핑몰로 가기</a>
+          <a class="btn btn-sm btn-block" href="index.html">몽글로 가기</a>
         </aside>
         <section class="card" style="min-width:0">${body}</section>
       </div>`;

@@ -65,7 +65,9 @@ function priceBlock(p) {
 
 // 진행 단계 이름: 반려동물은 입양 절차로 표시
 const ADOPT_STEPS = { 결제완료: '입양 신청 접수', 배송준비중: '분양자 검토·승인', 배송중: '인계 준비', 배송완료: '새 가족 품으로', 구매확정: '입양 완료', 주문취소: '신청 취소', 반품요청: '건강보증 접수', 반품완료: '건강보증 처리 완료' };
-function statusLabel(status, live) { return live ? ADOPT_STEPS[status] || status : status; }
+// 준비물(용품)도 다정한 말로
+const SUPPLY_STEPS = { 결제완료: '준비물 접수', 배송준비중: '포장하고 있어요', 배송중: '배송 중', 배송완료: '도착했어요', 구매확정: '잘 받았어요', 주문취소: '취소됨', 반품요청: '반품 접수', 반품완료: '반품 완료' };
+function statusLabel(status, live) { return (live ? ADOPT_STEPS : SUPPLY_STEPS)[status] || status; }
 
 function petCard(p) {
   const wished = Wish.has(p.id);
@@ -208,7 +210,7 @@ function renderHeader() {
     ${user
       ? `<span><strong>${esc(user.name)}</strong>님 · <strong>${Number(user.points || 0).toLocaleString()}P</strong></span><button id="logoutBtn">로그아웃</button>`
       : `<a href="${loginUrl()}">로그인</a><a href="signup.html">회원가입</a>`}
-    <a href="mypage.html">주문조회</a>
+    <a href="mypage.html">💌 입양 소식</a>
     <a href="help.html">고객센터</a>
     <a href="seller.html" class="seller-link">분양자·셀러센터 ↗</a>
   </div></div>
@@ -216,7 +218,7 @@ function renderHeader() {
     <div class="container header-main">
       <a href="index.html" class="logo" aria-label="몽글 홈">${LOGO}</a>
       <form class="search" action="products.html" role="search" id="searchForm" autocomplete="off">
-        <input name="q" id="searchInput" type="search" placeholder="어떤 친구를 찾고 있나요? 🐾" value="${esc(q)}" aria-label="상품 검색" maxlength="50">
+        <input name="q" id="searchInput" type="search" placeholder="어떤 친구를 찾고 있나요? 🐾" value="${esc(q)}" aria-label="친구 찾기" maxlength="50">
         <button type="submit" aria-label="검색">${ICON.search}</button>
         <div class="suggest hidden" id="suggest"></div>
       </form>
@@ -224,10 +226,11 @@ function renderHeader() {
         ${user ? `<div class="noti-wrap"><button type="button" class="icon-btn" id="notiBtn" aria-label="알림" aria-expanded="false">${ICON.bell}<span class="label">알림</span><span id="notiCount" class="badge-count hidden">0</span></button><div class="noti-panel hidden" id="notiPanel"></div></div>` : ''}
         <a href="mypage.html?tab=wish" aria-label="관심 친구">${ICON.heart}<span class="label">관심</span></a>
         <a href="mypage.html" aria-label="마이페이지">${ICON.user}<span class="label">MY</span></a>
-        <a href="cart.html" aria-label="입양 준비함">${ICON.basket}<span class="label">준비함</span><span id="cartCount" class="badge-count hidden">0</span></a>
+        <a href="cart.html" aria-label="몽글바구니">${ICON.basket}<span class="label">몽글바구니</span><span id="cartCount" class="badge-count hidden">0</span></a>
       </nav>
     </div>
     <nav class="catnav"><div class="container">
+      <a href="#" class="quiz-nav" data-quiz>🧩 나와 맞는 친구</a>
       <a href="products.html" class="${page === 'products.html' && !cat && !q && sort !== 'discount' ? 'active' : ''}">전체</a>
       ${CATEGORIES.map(c => `<a href="products.html?cat=${c.id}" class="${cat === c.id ? 'active' : ''}">${c.name}</a>`).join('')}
       <a href="products.html?sort=discount" class="hot ${sort === 'discount' && !cat && !q ? 'active' : ''}">용품 SALE</a>
@@ -354,85 +357,178 @@ function renderFooter() {
       <div><strong>책임 분양</strong>입양 신청서 검토 후 분양 · 15일 건강보증<br>생명은 택배 없이 직접 인계 · 동물판매업 등록 (데모)</div>
       <div><strong>분양자·브리더</strong><a href="seller.html">책임 분양 함께하기 →</a><br>용품 ${won(FREE_SHIPPING_MIN)} 이상 무료배송</div>
     </div>
-    <div class="notice">⚠️ 학습용 데모 사이트입니다. 실제 결제·배송이 이루어지지 않으며, 회원·주문·상품 정보는 이 브라우저(localStorage)에만 저장됩니다. 실제 분양이 아니며, 상품 사진은 Unsplash 무료 라이선스 이미지입니다. 실제 사용하는 비밀번호를 입력하지 마세요.</div>
+    <div class="notice">⚠️ 학습용 데모 사이트입니다. 실제 결제·배송이 이루어지지 않으며, 회원·입양·준비물 정보는 이 브라우저(localStorage)에만 저장됩니다. 실제 분양이 아니며, 사진은 Unsplash 무료 라이선스 이미지입니다. 실제 사용하는 비밀번호를 입력하지 마세요.</div>
     <div class="footer-bottom"><span>© 2026 mongle. All rights reserved.</span><button class="link-btn" id="toTop" type="button">맨 위로 ↑</button></div>
     <div class="wordmark" aria-hidden="true">mongle<i>♥</i></div>
   </div></footer>`;
   $('#toTop').addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
 }
 
-// ---------- 나와 꼭 맞는 친구 찾기 퀴즈 ----------
+// ---------- 나와 꼭 맞는 친구 찾기 퀴즈 (10문항) ----------
 const QUIZ = [
-  ['home', '어떤 집에서 살고 있나요?', ['아파트·빌라', '마당 있는 주택', '원룸·오피스텔']],
-  ['alone', '아이가 하루에 혼자 있을 시간은요?', ['4시간 이하', '4~8시간', '8시간 이상']],
-  ['exp', '반려동물을 키워본 적이 있나요?', ['처음이에요', '조금 키워봤어요', '경험이 많아요']],
-  ['kids', '어린아이와 함께 살고 있나요?', ['네', '아니요']],
-  ['shed', '털 날림이나 알레르기가 걱정되나요?', ['네, 걱정돼요', '괜찮아요']],
-  ['walk', '하루에 산책·놀이에 쓸 수 있는 시간은요?', ['30분 이하', '1시간 정도', '2시간 이상']],
+  ['who', '👨‍👩‍👧 누구와 함께 살고 있나요?', ['혼자 살아요', '둘이 살아요', '어린아이가 있어요', '어르신이 계세요']],
+  ['home', '🏠 어떤 집에서 살아요?', ['원룸·오피스텔', '아파트·빌라', '마당 있는 주택']],
+  ['alone', '🕰️ 아이가 하루에 혼자 있을 시간은요?', ['4시간 이하', '4~8시간', '8시간 이상']],
+  ['exp', '🌱 반려동물을 키워본 적이 있나요?', ['처음이에요', '조금 키워봤어요', '경험이 많아요']],
+  ['walk', '🦮 하루에 산책·놀이에 쓸 수 있는 시간은요?', ['30분 이하', '1시간 정도', '2시간 이상']],
+  ['touch', '🤗 어떤 교감을 꿈꾸나요?', ['안고 쓰다듬고 싶어요', '곁에 있어 주면 좋아요', '바라보며 힐링하고 싶어요']],
+  ['noise', '🔇 소리에 민감한 환경인가요? (이웃·층간소음)', ['조용해야 해요', '조금은 괜찮아요', '상관없어요']],
+  ['shed', '🧹 털이나 알레르기가 걱정되나요?', ['알레르기가 있어요', '털 날림이 조금 걱정돼요', '괜찮아요']],
+  ['budget', '💸 한 달 돌봄 예산은 어느 정도인가요?', ['5만원 이하', '5~15만원', '15만원 이상']],
+  ['years', '🗓️ 앞으로 얼마나 오래 함께할 수 있나요?', ['5년 정도', '10년 정도', '20년도 괜찮아요']],
 ];
+const CUDDLY = ['dog', 'cat', 'small'];
+const WATCHY = ['fish', 'reptile', 'insect'];
+
 function quizMatch(a) {
   return Catalog.visible().filter(p => p.live && !p.soldOut && p.pet).map(p => {
     const t = p.pet.traits || [];
+    const cat = p.category;
+    const cost = p.pet.cost || { monthly: 0, years: 10 };
     let score = 0;
-    const why = [];
+    const good = [], warn = [];
     const care = p.pet.care;
-    if (a.exp === '처음이에요') score += care === '초보 추천' ? 2 : care === '보통' ? -1 : -4;
-    if (a.exp === '조금 키워봤어요') score += care === '경험자 추천' ? -1 : 1;
-    if (care === '초보 추천' && a.exp === '처음이에요') why.push('처음 키우기 좋아요');
-    if (a.home !== '마당 있는 주택') { if (t.includes('apt')) { score += 1; why.push('아파트에서도 좋아요'); } else score -= 2; }
-    if (a.alone !== '4시간 이하') { if (t.includes('alone')) { score += 2; why.push('혼자서도 잘 지내요'); } else score -= a.alone === '8시간 이상' ? 4 : 2; }
-    if (a.kids === '네') { if (t.includes('kids')) { score += 1; why.push('아이와 함께해도 좋아요'); } else score -= 2; }
-    if (a.shed === '네, 걱정돼요') { if (t.includes('lowshed')) { score += 2; why.push('털 날림이 적어요'); } else score -= 2; }
-    if (p.category === 'dog') {
-      const big = /대형|중형/.test(p.pet.size);
-      if (a.walk === '30분 이하') score -= big ? 4 : 2;
-      if (a.walk === '2시간 이상') { score += 2; why.push('활동적인 가족과 잘 맞아요'); }
+    // 경험
+    if (a.exp === '처음이에요') { if (care === '초보 추천') { score += 2; good.push('처음 키우기 좋아요'); } else if (care === '보통') score -= 1; else { score -= 4; warn.push('경험이 있는 분께 더 잘 맞아요'); } }
+    if (a.exp === '조금 키워봤어요' && care === '경험자 추천') { score -= 1; warn.push('조금 더 공부가 필요해요'); }
+    // 집
+    if (a.home !== '마당 있는 주택') { if (t.includes('apt')) { score += 1; good.push('아파트에서도 좋아요'); } else { score -= 2; warn.push('넓은 공간이 필요해요'); } }
+    // 혼자 있는 시간
+    if (a.alone !== '4시간 이하') { if (t.includes('alone')) { score += 2; good.push('혼자서도 잘 지내요'); } else { score -= a.alone === '8시간 이상' ? 4 : 2; warn.push('혼자 있는 시간이 길면 외로워해요'); } }
+    // 가족
+    if (a.who === '어린아이가 있어요') { if (t.includes('kids')) { score += 2; good.push('아이와 함께해도 좋아요'); } else { score -= 2; warn.push('어린아이와는 조심스러워요'); } }
+    if (a.who === '어르신이 계세요') { if (care === '초보 추천' && t.includes('quiet')) { score += 2; good.push('차분해서 어르신과 잘 맞아요'); } if (/대형|중대형/.test(p.pet.size)) score -= 2; }
+    // 산책·활동
+    if (cat === 'dog') {
+      const big = /대형|중형|운동량|활동량/.test(p.pet.size);
+      if (a.walk === '30분 이하') { score -= big ? 5 : 2; warn.push('매일 산책이 꼭 필요해요'); }
+      if (a.walk === '2시간 이상') { score += big ? 3 : 1; good.push('활동적인 가족과 잘 맞아요'); }
       if (a.home === '마당 있는 주택' && big) score += 1;
-    }
-    if (t.includes('quiet') && a.home === '원룸·오피스텔') { score += 1; why.push('조용한 편이에요'); }
-    return { p, score, why: why.slice(0, 3) };
+    } else if (a.walk === '2시간 이상' && WATCHY.includes(cat)) score -= 1;
+    // 교감 방식
+    // 교감 방식은 가장 중요한 바람이라 크게 반영 (안고 싶은데 물고기·곤충을 추천하지 않도록)
+    if (a.touch === '안고 쓰다듬고 싶어요') { if (CUDDLY.includes(cat)) { score += 3; good.push('품에 안고 교감할 수 있어요'); } else if (cat === 'bird') score -= 1; else { score -= 10; } }
+    if (a.touch === '곁에 있어 주면 좋아요') { if (['cat', 'dog', 'bird'].includes(cat)) { score += 1; good.push('곁을 잘 지켜줘요'); } }
+    if (a.touch === '바라보며 힐링하고 싶어요') { if (WATCHY.includes(cat)) { score += 4; good.push('바라보는 것만으로 힐링돼요'); } else if (cat === 'dog') score -= 2; }
+    // 소리
+    if (a.noise === '조용해야 해요') { if (t.includes('quiet')) { score += 2; good.push('조용한 편이에요'); } else { score -= cat === 'bird' || cat === 'dog' ? 3 : 1; warn.push('소리를 낼 수 있어요'); } }
+    if (a.noise === '조금은 괜찮아요' && !t.includes('quiet') && (cat === 'bird' || cat === 'dog')) score -= 1;
+    // 털·알레르기
+    // 알레르기: 개·고양이 비듬은 흔한 알레르기 원인이라 털 날림이 적은 아이만 추천
+    if (a.shed === '알레르기가 있어요') { if (t.includes('lowshed')) { score += 3; good.push('털 날림이 적어요'); } else { score -= cat === 'dog' || cat === 'cat' ? 9 : CUDDLY.includes(cat) || cat === 'bird' ? 4 : 1; warn.push('털·비듬 알레르기에 주의해요'); } }
+    if (a.shed === '털 날림이 조금 걱정돼요') { if (t.includes('lowshed')) { score += 1; good.push('털 날림이 적어요'); } else if (CUDDLY.includes(cat)) score -= 1; }
+    // 예산
+    const m = cost.monthly;
+    if (a.budget === '5만원 이하') { if (m <= 50000) { score += 2; good.push(`한 달 약 ${feeText(m)}이면 충분해요`); } else { score -= m > 120000 ? 5 : 3; warn.push(`한 달 약 ${feeText(m)}이 들어요`); } }
+    if (a.budget === '5~15만원') { if (m <= 150000) score += 1; else { score -= 3; warn.push(`한 달 약 ${feeText(m)}이 들어요`); } }
+    // 함께할 기간
+    const yrs = cost.years;
+    if (a.years === '5년 정도') { if (yrs <= 6) { score += 2; good.push(`약 ${yrs}년을 함께해요`); } else { score -= yrs > 12 ? 4 : 2; warn.push(`약 ${yrs}년을 함께해야 해요`); } }
+    if (a.years === '10년 정도' && yrs > 16) { score -= 2; warn.push(`약 ${yrs}년을 함께해야 해요`); }
+    if (a.years === '20년도 괜찮아요' && yrs >= 12) score += 1;
+    const pct = Math.max(35, Math.min(98, Math.round(62 + score * 4)));
+    return { p, score, pct, good: good.slice(0, 3), warn: warn.slice(0, 2) };
   }).sort((x, y) => y.score - x.score || x.p.price - y.p.price)
     // 같은 분류는 최대 2마리까지만 → 다양한 친구를 추천
     .filter(function (r) { this[r.p.category] = (this[r.p.category] || 0) + 1; return this[r.p.category] <= 2; }, {})
-    .slice(0, 4);
+    .slice(0, 6);
 }
+
 function openQuiz() {
-  let showing = false;
-  const w = modal({
-    title: '🧩 나와 꼭 맞는 친구 찾기',
-    body: `<p class="muted" style="margin-top:0;font-size:14px">6가지 질문에 답하면 우리 집 생활에 잘 맞는 친구를 추천해 드려요.</p>
-      ${QUIZ.map(([k, q, opts]) => `<div class="q quiz-q"><span class="q-title">${q}</span><div class="choice-row">${opts.map(o => `<label><input type="radio" name="qz_${k}" value="${o}"> ${o}</label>`).join('')}</div></div>`).join('')}
-      <div class="error-text" id="qzErr"></div><div id="qzResult"></div>`,
-    okText: '추천 받기',
-    cancelText: '닫기',
-    onOk: wrap => {
-      if (showing) return; // 결과를 본 뒤에는 닫기
-      const a = {};
-      for (const [k] of QUIZ) {
-        const c = $(`input[name=qz_${k}]:checked`, wrap);
-        if (!c) { $('#qzErr', wrap).textContent = '모든 질문에 답해 주세요.'; return false; }
-        a[k] = c.value;
-      }
-      const res = quizMatch(a);
-      $$('.quiz-q', wrap).forEach(el => el.classList.add('hidden'));
-      $('#qzErr', wrap).textContent = '';
-      $('#qzResult', wrap).innerHTML = `<h4 style="margin:0 0 10px">💛 이런 친구들이 잘 맞을 것 같아요</h4>` + res.map(({ p, why }) => `
-        <a class="quiz-pick" href="product.html?id=${p.id}">${thumb(p, 'sm')}<div><strong>${esc(p.name.split(' · ')[0])}</strong>
-          <div class="muted" style="font-size:12px">${esc(p.pet.age)} · ${esc(p.pet.care)}</div>
-          <div style="font-size:12px;color:var(--forest)">${why.map(esc).join(' · ') || '생활 패턴과 무난하게 잘 맞아요'}</div></div></a>`).join('') +
-        `<p class="muted" style="font-size:12px">결과는 참고용이에요. 꼭 직접 만나보고, 분양자와 상담한 뒤 결정해 주세요.</p>
-         <a class="btn btn-sm btn-outline" href="products.html?live=1">모든 친구 둘러보기</a>`;
-      $('[data-ok]', wrap).textContent = '닫기';
-      showing = true;
-      return false;
-    },
-  });
-  return w;
+  try { localStorage.setItem('pet_quizSeen', '1'); } catch (e) { /* 저장 불가 무시 */ }
+  $$('.modal-wrap').forEach(m => m.remove());
+  const answers = {};
+  let step = 0;
+  const wrap = document.createElement('div');
+  wrap.className = 'modal-wrap';
+  wrap.innerHTML = `<div class="modal quiz-modal" role="dialog" aria-modal="true" aria-label="나와 맞는 친구 찾기"><button class="quiz-close" type="button" aria-label="닫기">✕</button><div class="quiz-body"></div></div>`;
+  document.body.appendChild(wrap);
+  const body = $('.quiz-body', wrap);
+  const close = () => { wrap.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if (e.key === 'Escape') close(); };
+  document.addEventListener('keydown', onKey);
+  wrap.addEventListener('click', e => { if (e.target === wrap || e.target.closest('.quiz-close')) close(); });
+
+  function paintQ() {
+    const [k, q, opts] = QUIZ[step];
+    body.innerHTML = `
+      <div class="quiz-top"><span>🧩 나와 꼭 맞는 친구 찾기</span><span>${step + 1} / ${QUIZ.length}</span></div>
+      <div class="quiz-progress"><i style="width:${Math.round((step + 1) / QUIZ.length * 100)}%"></i></div>
+      <h3 class="quiz-q-title">${q}</h3>
+      <div class="quiz-opts">${opts.map(o => `<button type="button" class="quiz-opt ${answers[k] === o ? 'on' : ''}" data-v="${esc(o)}">${esc(o)}</button>`).join('')}</div>
+      <div class="quiz-nav-row">${step ? '<button type="button" class="btn btn-sm" data-back>← 이전</button>' : '<span class="muted" style="font-size:12px">솔직하게 답할수록 잘 맞는 친구를 찾아요</span>'}</div>`;
+    $$('.quiz-opt', body).forEach(b => b.addEventListener('click', () => {
+      answers[k] = b.dataset.v;
+      b.classList.add('on');
+      setTimeout(() => { if (step < QUIZ.length - 1) { step++; paintQ(); } else paintResult(); }, 160);
+    }));
+    const back = $('[data-back]', body);
+    if (back) back.addEventListener('click', () => { step--; paintQ(); });
+    const first = $('.quiz-opt', body);
+    if (first) first.focus();
+  }
+
+  function paintResult() {
+    const res = quizMatch(answers);
+    const cats = [...new Set(res.slice(0, 4).map(r => getCategory(r.p.category).name))];
+    try { localStorage.setItem('pet_quizAnswers', JSON.stringify(answers)); } catch (e) { /* 무시 */ }
+    body.innerHTML = `
+      <div class="quiz-top"><span>💛 결과가 나왔어요</span><span>${QUIZ.length} / ${QUIZ.length}</span></div>
+      <div class="quiz-progress"><i style="width:100%"></i></div>
+      <h3 class="quiz-q-title" style="margin-bottom:4px">우리 집엔 <mark>${esc(cats.join(' · '))}</mark> 친구가 잘 맞아요</h3>
+      <p class="muted" style="margin:0 0 12px;font-size:13px">생활 패턴과 잘 맞는 순서예요. 꼭 직접 만나보고 상담한 뒤 결정해 주세요.</p>
+      <div class="quiz-results">${res.map(({ p, pct, good, warn }) => `
+        <a class="quiz-pick" href="product.html?id=${p.id}">${thumb(p, 'sm')}<div style="flex:1;min-width:0">
+          <div style="display:flex;justify-content:space-between;gap:8px"><strong>${esc(p.name)}</strong><span class="match">${pct}% 잘 맞아요</span></div>
+          <div class="muted" style="font-size:12px">${esc(p.pet.age)} · ${esc(p.pet.care)} · 한 달 약 ${feeText(p.pet.cost.monthly)}</div>
+          ${good.length ? `<div class="q-good">✓ ${good.map(esc).join(' · ')}</div>` : ''}
+          ${warn.length ? `<div class="q-warn">! ${warn.map(esc).join(' · ')}</div>` : ''}
+        </div></a>`).join('')}</div>
+      <div class="quiz-nav-row"><button type="button" class="btn btn-sm" data-restart>다시 하기</button><a class="btn btn-sm btn-primary" href="products.html?live=1">모든 친구 둘러보기</a></div>`;
+    $('[data-restart]', body).addEventListener('click', () => { step = 0; Object.keys(answers).forEach(k => delete answers[k]); paintQ(); });
+  }
+  paintQ();
+  return wrap;
 }
+
+// 처음 방문했다면 퀴즈로 초대 + 화면 구석의 퀴즈 버튼
+function setupQuizInvite() {
+  if (!$('.quiz-fab')) {
+    const fab = document.createElement('button');
+    fab.type = 'button';
+    fab.className = 'quiz-fab';
+    fab.setAttribute('data-quiz', '');
+    fab.innerHTML = '<span class="fab-ico">🧩</span><span class="fab-text">나와 맞는 친구 찾기</span>';
+    document.body.appendChild(fab);
+  }
+  let seen = '1';
+  try { seen = localStorage.getItem('pet_quizSeen'); } catch (e) { /* 무시 */ }
+  const page = location.pathname.split('/').pop() || 'index.html';
+  if (!seen && ['index.html', 'products.html', ''].includes(page)) {
+    setTimeout(() => {
+      if ($('.modal-wrap')) return;
+      try { localStorage.setItem('pet_quizSeen', '1'); } catch (e) { /* 무시 */ }
+      const w = document.createElement('div');
+      w.className = 'modal-wrap';
+      w.innerHTML = `<div class="modal welcome-modal" role="dialog" aria-modal="true" aria-label="몽글에 오신 걸 환영해요">
+        <div class="welcome-paws" aria-hidden="true">🐶 🐱 🐰 🐦 🐠 🦎</div>
+        <h3>몽글에 처음 오셨나요? 💛</h3>
+        <p>10가지 질문에 답하면 <b>우리 집과 꼭 맞는 친구</b>를 찾아드려요.<br><span class="muted">1분이면 충분해요 · 결과는 참고용이에요</span></p>
+        <button type="button" class="btn btn-primary btn-lg btn-block" data-quiz>🧩 나와 맞는 친구 찾기 시작</button>
+        <button type="button" class="link-btn" data-later style="margin-top:12px">먼저 둘러볼게요</button>
+      </div>`;
+      document.body.appendChild(w);
+      const close = () => w.remove();
+      w.addEventListener('click', e => { if (e.target === w || e.target.closest('[data-later]')) close(); if (e.target.closest('[data-quiz]')) close(); });
+    }, 900);
+  }
+}
+
 document.addEventListener('click', e => {
-  if (e.target.closest('[data-quiz]')) { e.preventDefault(); openQuiz(); }
+  if (e.target.closest('[data-quiz]')) { e.preventDefault(); setTimeout(openQuiz, 0); }
 });
 
 try { CarePlan.check(); } catch (e) { /* 저장소 접근 불가 시 무시 */ }
 renderHeader();
 renderFooter();
+setupQuizInvite();

@@ -60,7 +60,7 @@
     $('#submit').disabled = true;
     try {
       await Auth.signup({ name: v.name, email: v.email, password: v.pw, phone: v.phone, marketing: $('#marketing').checked });
-      alert(`${v.name}님, 가입을 환영합니다! 🎉\n첫 구매 시 쿠폰코드 WELCOME10을 사용해 보세요.`);
+      alert(`${v.name}님, 가입을 환영합니다! 🎉\n준비물을 받아볼 때 쿠폰코드 WELCOME10을 사용해 보세요.`);
       location.href = redirect;
     } catch (ex) {
       $('[data-err="email"]').textContent = ex.message;

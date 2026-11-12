@@ -1,6 +1,6 @@
 (function () {
   if (!Auth.require()) return;
-  const TABS = [['orders', '입양·주문 내역'], ['care', '🩺 건강 캘린더'], ['coupons', '쿠폰함'], ['wish', '관심 친구·상품'], ['recent', '최근 본 상품'], ['address', '배송지 관리'], ['qna', '내 문의'], ['profile', '회원정보']];
+  const TABS = [['orders', '💌 우리 아이 소식'], ['care', '🩺 건강 캘린더'], ['coupons', '쿠폰함'], ['wish', '관심 친구·용품'], ['recent', '최근 만난 친구'], ['address', '배송지 관리'], ['qna', '내 문의'], ['profile', '회원정보']];
   let tab = TABS.some(t => t[0] === param('tab')) ? param('tab') : 'orders';
   let orderFilter = '전체';
 
@@ -15,15 +15,15 @@
       return s === f;
     };
     const orders = all.filter(o => match(o, orderFilter));
-    const head = `<div class="sort-tabs" style="margin-bottom:14px">${filters.map(f => `<button data-filter="${f}" class="${f === orderFilter ? 'active' : ''}">${f === '배송중' ? '진행중' : f} (${all.filter(o => match(o, f)).length})</button>`).join('')}</div>`;
-    if (!all.length) return `<div class="empty"><div class="ico">📦</div><p>주문 내역이 없어요.</p><a class="btn btn-primary" href="index.html">쇼핑하러 가기</a></div>`;
-    if (!orders.length) return head + `<div class="empty"><p>해당하는 주문이 없어요.</p></div>`;
+    const head = `<div class="sort-tabs" style="margin-bottom:14px">${filters.map(f => `<button data-filter="${f}" class="${f === orderFilter ? 'active' : ''}">${({ 배송중: '진행 중', 배송완료: '도착·인계', 구매확정: '완료' })[f] || f} (${all.filter(o => match(o, f)).length})</button>`).join('')}</div>`;
+    if (!all.length) return `<div class="empty"><div class="ico">📦</div><p>아직 소식이 없어요. 새 가족을 만나러 가볼까요?</p><a class="btn btn-primary" href="index.html">친구들 만나러 가기</a></div>`;
+    if (!orders.length) return head + `<div class="empty"><p>해당하는 소식이 없어요.</p></div>`;
     return head + orders.map(o => {
       const st = Orders.status(o);
       return `
       <div class="order">
         <div class="order-head">
-          <div><strong>${fmtDate(o.date)} ${o.items.some(i => i.live) ? '입양 신청' : '주문'}</strong> <span class="muted" style="font-size:13px">· ${esc(o.no)}</span></div>
+          <div><strong>${fmtDate(o.date)} ${o.items.some(i => i.live) ? '입양 신청' : '준비물'}</strong> <span class="muted" style="font-size:13px">· ${esc(o.no)}</span></div>
           <span class="status s-${st}">${statusLabel(st, o.items.some(i => i.live))}</span>
         </div>
         ${o.items.map((i, idx) => {
@@ -38,11 +38,11 @@
               ${i.refund ? `<div class="muted" style="font-size:12px">💸 환불 ${won(i.refund.cash)}${i.refund.points ? ` + ${i.refund.points.toLocaleString()}P` : ''}${i.refund.fee ? ` (반품배송비 ${won(i.refund.fee)} 차감)` : ''}</div>` : ''}</div>
             <div style="text-align:right"><span class="status s-${i.status}">${statusLabel(i.status, i.live)}</span>
               <div class="item-actions">
-                ${i.status === '배송완료' ? `<button class="btn btn-sm btn-primary" data-confirm="${esc(o.no)}" data-idx="${idx}" data-live="${i.live ? 1 : ''}">${i.live ? '입양 완료' : '구매확정'}</button><button class="btn btn-sm" data-return="${esc(o.no)}" data-idx="${idx}">${i.live ? '건강보증 신청' : '반품신청'}</button>` : ''}
+                ${i.status === '배송완료' ? `<button class="btn btn-sm btn-primary" data-confirm="${esc(o.no)}" data-idx="${idx}" data-live="${i.live ? 1 : ''}">${i.live ? '입양 완료' : '잘 받았어요'}</button><button class="btn btn-sm" data-return="${esc(o.no)}" data-idx="${idx}">${i.live ? '건강보증 신청' : '반품신청'}</button>` : ''}
                 ${['배송완료', '구매확정'].includes(i.status) && !i.reviewed && p ? `<button class="btn btn-sm btn-outline" data-review="${esc(o.no)}" data-idx="${idx}">${i.live ? '입양 후기' : '리뷰쓰기'}</button>` : ''}
                 ${i.reviewed ? '<span class="muted" style="font-size:12px">리뷰 작성완료</span>' : ''}
                 ${i.live && ['배송완료', '구매확정'].includes(i.status) && !i.rehome ? `<button class="btn btn-sm" data-rehome="${esc(o.no)}" data-idx="${idx}">함께하기 어려워졌어요</button>` : ''}
-                ${!i.live && ['배송완료', '구매확정'].includes(i.status) && p && p.status !== 'hidden' && !p.soldOut ? `<button class="btn btn-sm" data-rebuy="${i.id}" data-opt="${esc(i.option)}">재구매</button>` : ''}
+                ${!i.live && ['배송완료', '구매확정'].includes(i.status) && p && p.status !== 'hidden' && !p.soldOut ? `<button class="btn btn-sm" data-rebuy="${i.id}" data-opt="${esc(i.option)}">다시 담기</button>` : ''}
               </div>
             </div></div>`;
         }).join('')}
@@ -50,8 +50,8 @@
           <span>${o.adoption ? (o.paid ? `분양비 <strong>${feeText(o.totals.total)}</strong> <span class="muted" style="font-size:13px">(${esc(o.payMethod)})</span>` : Orders.status(o) === '주문취소' ? '<span class="muted">결제 없이 마무리되었어요</span>' : `분양비 <strong>${feeText(o.totals.total)}</strong> <span class="muted" style="font-size:13px">· ${Orders.canPayAdoption(o) ? '승인 완료! 결제를 기다려요' : '만남·승인 후 결제'}</span>`) : `결제금액 <strong>${won(o.totals.total)}</strong> <span class="muted" style="font-size:13px">(${esc(o.payMethod)})</span>`}</span>
           <span style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">
             ${Orders.canPayAdoption(o) ? `<button class="btn btn-sm btn-primary" data-payadopt="${esc(o.no)}">💳 분양비 결제하기</button>` : ''}
-            <a class="btn btn-sm" href="order-complete.html?no=${encodeURIComponent(o.no)}">${o.adoption ? '신청 상세' : '주문상세'}</a>
-            ${Orders.canCancel(o) ? `<button class="btn btn-sm" data-cancel="${esc(o.no)}">${o.adoption ? '신청 취소' : '주문취소'}</button>` : ''}
+            <a class="btn btn-sm" href="order-complete.html?no=${encodeURIComponent(o.no)}">${o.adoption ? '신청 상세' : '자세히 보기'}</a>
+            ${Orders.canCancel(o) ? `<button class="btn btn-sm" data-cancel="${esc(o.no)}">${o.adoption ? '신청 취소' : '취소하기'}</button>` : ''}
           </span>
         </div>
       </div>`;
@@ -60,7 +60,7 @@
 
   function gridOrEmpty(ids, emptyMsg, extra = '') {
     const list = ids.map(getProduct).filter(p => p && p.status !== 'hidden');
-    return list.length ? extra + `<div class="grid">${list.map(productCard).join('')}</div>` : `<div class="empty"><div class="ico">🛍️</div><p>${emptyMsg}</p><a class="btn btn-primary" href="index.html">상품 둘러보기</a></div>`;
+    return list.length ? extra + `<div class="grid">${list.map(productCard).join('')}</div>` : `<div class="empty"><div class="ico">🛍️</div><p>${emptyMsg}</p><a class="btn btn-primary" href="index.html">친구들 만나보기</a></div>`;
   }
 
   function couponsHtml() {
@@ -74,7 +74,7 @@
           <span style="font-weight:700;color:${c.used ? 'var(--muted)' : 'var(--forest)'}">${c.used ? '사용 완료' : '사용 가능'}</span></div></div>`;
       }).join('') || '<p class="muted">쿠폰이 없어요.</p>'}</div>
       <div class="coupon-row" style="margin-top:18px;max-width:420px"><input class="input" id="regCode" placeholder="쿠폰 코드 입력"><button class="btn" id="regBtn">등록</button></div>
-      <p class="muted" style="font-size:13px">쿠폰은 주문 1건에 1장 사용할 수 있고, 주문을 취소하면 다시 돌려받아요.</p>`;
+      <p class="muted" style="font-size:13px">쿠폰은 한 번에 1장 쓸 수 있고, 취소하면 다시 돌려받아요.</p>`;
   }
 
   function addressHtml() {
@@ -136,9 +136,9 @@
   function qnaHtml() {
     const u = Auth.current();
     const list = QnA.all().filter(q => q.email === u.email);
-    if (!list.length) return '<div class="empty"><div class="ico">💬</div><p>작성한 문의가 없어요. 상품 상세페이지의 [문의] 탭에서 질문할 수 있어요.</p></div>';
+    if (!list.length) return '<div class="empty"><div class="ico">💬</div><p>작성한 문의가 없어요. 친구·용품 페이지의 [문의] 탭에서 질문할 수 있어요.</p></div>';
     return list.map(q => `<div class="qna">
-      <div><span class="chip ${q.answer ? 'on' : 'off'}">${q.answer ? '답변완료' : '답변대기'}</span> <a href="product.html?id=${q.productId}&tab=qna" class="muted" style="font-size:13px">${esc(getProduct(q.productId)?.name || '삭제된 상품')}</a></div>
+      <div><span class="chip ${q.answer ? 'on' : 'off'}">${q.answer ? '답변완료' : '답변대기'}</span> <a href="product.html?id=${q.productId}&tab=qna" class="muted" style="font-size:13px">${esc(getProduct(q.productId)?.name || '지금은 볼 수 없는 친구')}</a></div>
       <p style="margin:6px 0"><b>Q.</b> ${esc(q.question)}</p><div class="muted" style="font-size:12px">${fmtDate(q.date)}</div>
       ${q.answer ? `<div class="a"><b>A.</b> ${esc(q.answer)}</div>` : ''}</div>`).join('');
   }
@@ -151,7 +151,7 @@
       <tr><th>이메일</th><td>${esc(u.email)}</td></tr>
       <tr><th>휴대폰</th><td>${esc(u.phone)}</td></tr>
       <tr><th>적립금</th><td><strong style="color:var(--primary)">${won(u.points)}</strong></td></tr>
-      <tr><th>기본 배송지</th><td>${a ? `[${esc(a.zip)}] ${esc(a.addr1)} ${esc(a.addr2)}` : '<span class="muted">등록된 배송지가 없어요 (첫 주문 시 저장)</span>'}</td></tr>
+      <tr><th>기본 배송지</th><td>${a ? `[${esc(a.zip)}] ${esc(a.addr1)} ${esc(a.addr2)}` : '<span class="muted">등록된 배송지가 없어요 (첫 신청 때 저장돼요)</span>'}</td></tr>
       <tr><th>마케팅 수신</th><td><label class="check"><input type="checkbox" id="mkt" ${u.marketing ? 'checked' : ''}> 이벤트·혜택 알림 받기</label></td></tr>
       <tr><th>판매자</th><td>${u.seller ? `${esc(u.seller.storeName)} <a class="btn btn-sm" href="seller.html">셀러센터</a>` : '<a class="btn btn-sm" href="seller.html">판매자 등록하기</a>'}</td></tr>
       <tr><th>가입일</th><td>${fmtDate(u.createdAt)}</td></tr>
@@ -168,8 +168,8 @@
     const toConfirm = orders.reduce((n, o) => n + o.items.filter(i => i.status === '배송완료').length, 0);
     const body = {
       orders: ordersHtml,
-      wish: () => gridOrEmpty(Wish.list(), '찜한 상품이 없어요.'),
-      recent: () => gridOrEmpty(Recent.list(), '최근 본 상품이 없어요.', Recent.list().length ? '<div style="text-align:right;margin-bottom:10px"><button class="link-btn" id="clearRecent">전체 삭제</button></div>' : ''),
+      wish: () => gridOrEmpty(Wish.list(), '마음에 담은 친구가 없어요. 🤍를 눌러보세요.'),
+      recent: () => gridOrEmpty(Recent.list(), '최근 만난 친구가 없어요.', Recent.list().length ? '<div style="text-align:right;margin-bottom:10px"><button class="link-btn" id="clearRecent">전체 삭제</button></div>' : ''),
       qna: qnaHtml,
       care: careHtml,
       coupons: couponsHtml,
@@ -182,8 +182,8 @@
         <aside class="card my-menu">
           <div class="profile"><strong>${esc(u.name)}</strong>님
             <div class="muted" style="font-size:13px">적립금 <b style="color:var(--primary)">${won(u.points)}</b></div>
-            <div class="muted" style="font-size:13px">주문 ${orders.length}건 · 찜 ${Wish.list().length}개 · 쿠폰 ${CouponBox.usable().length}장</div>
-            ${toConfirm ? `<div class="free-hint" style="margin-bottom:0">입양 완료·구매확정 대기 ${toConfirm}건</div>` : ''}
+            <div class="muted" style="font-size:13px">소식 ${orders.length}건 · 관심 ${Wish.list().length}개 · 쿠폰 ${CouponBox.usable().length}장</div>
+            ${toConfirm ? `<div class="free-hint" style="margin-bottom:0">확인을 기다리는 소식 ${toConfirm}건</div>` : ''}
           </div>
           ${TABS.map(([k, v]) => `<button data-tab="${k}" class="${k === tab ? 'active' : ''}">${v}</button>`).join('')}
         </aside>
@@ -203,24 +203,24 @@
     }));
     $$('[data-filter]').forEach(b => b.addEventListener('click', () => { orderFilter = b.dataset.filter; render(); }));
     $$('[data-cancel]').forEach(b => b.addEventListener('click', () => modal({
-      title: '주문 취소',
-      body: '<p>이 주문을 취소할까요?<br><span class="muted" style="font-size:13px">결제 금액은 결제 수단으로 환불되고, 사용한 적립금은 즉시 반환돼요. (데모)</span></p>',
-      okText: '주문 취소',
+      title: '취소하기',
+      body: '<p>정말 취소할까요?<br><span class="muted" style="font-size:13px">결제 금액은 결제 수단으로 환불되고, 사용한 적립금은 즉시 반환돼요. (데모)</span></p>',
+      okText: '취소할게요',
       onOk: () => {
-        if (Orders.cancel(b.dataset.cancel)) toast('주문이 취소되었어요.');
+        if (Orders.cancel(b.dataset.cancel)) toast('취소되었어요.');
         else toast('이미 발송되어 취소할 수 없어요. 고객센터로 문의해 주세요.');
         renderHeader(); render();
       },
     })));
     $$('[data-confirm]').forEach(b => b.addEventListener('click', () => modal({
-      title: b.dataset.live ? '입양 완료' : '구매확정',
+      title: b.dataset.live ? '입양 완료' : '잘 받았어요',
       body: b.dataset.live
         ? '<p>새 가족과 잘 지내고 있나요? 💛<br><span class="muted" style="font-size:13px">입양 완료 후에는 건강보증 신청이 어려워요. 15일 동안 건강하게 지냈는지 확인 후 눌러주세요.</span></p>'
-        : '<p>상품을 잘 받으셨나요?<br><span class="muted" style="font-size:13px">구매확정 후에는 교환·반품 신청이 어려워요.</span></p>',
-      okText: b.dataset.live ? '입양 완료' : '구매확정',
+        : '<p>준비물을 잘 받으셨나요?<br><span class="muted" style="font-size:13px">확인 후에는 교환·반품 신청이 어려워요.</span></p>',
+      okText: b.dataset.live ? '입양 완료' : '잘 받았어요',
       onOk: () => {
         const pts = Orders.confirm(b.dataset.confirm, Number(b.dataset.idx));
-        toast(b.dataset.live ? '입양을 축하해요! 오래오래 행복하세요. 💛' : `구매확정 완료! 적립금 ${won(pts)}이 적립되었어요.`);
+        toast(b.dataset.live ? '입양을 축하해요! 오래오래 행복하세요. 💛' : `고마워요! 적립금 ${won(pts)}이 적립되었어요.`);
         renderHeader(); render();
       },
     })));
@@ -271,8 +271,8 @@
     const add = $('#addAddr');
     if (add) add.addEventListener('click', () => openAddress(null));
     $$('[data-rebuy]').forEach(b => b.addEventListener('click', () => {
-      if (Cart.add(Number(b.dataset.rebuy), b.dataset.opt, 1)) toast('입양 준비함에 담았어요. 🧺', 'cart.html', '장바구니 보기');
-      else toast('지금은 구매할 수 없는 상품이에요.');
+      if (Cart.add(Number(b.dataset.rebuy), b.dataset.opt, 1)) toast('몽글바구니에 담았어요. 🧺', 'cart.html', '바구니 보기');
+      else toast('지금은 담을 수 없는 준비물이에요.');
     }));
     const cr = $('#clearRecent');
     if (cr) cr.addEventListener('click', () => { Recent.clear(); render(); });
@@ -332,7 +332,7 @@
       title: '리뷰 쓰기',
       body: `<p style="margin-top:0"><b>${esc(it.name)}</b>${it.option ? `<br><span class="muted" style="font-size:13px">${esc(it.option)}</span>` : ''}</p>
         <div class="star-input" role="radiogroup" aria-label="별점">${[1, 2, 3, 4, 5].map(n => `<button type="button" data-s="${n}" class="on" aria-label="${n}점">★</button>`).join('')}</div>
-        <textarea class="input" id="rvText" rows="4" maxlength="1000" placeholder="상품은 어떠셨나요? 다른 고객에게 도움이 되도록 10자 이상 적어주세요." style="margin-top:10px"></textarea>
+        <textarea class="input" id="rvText" rows="4" maxlength="1000" placeholder="어떠셨나요? 다른 고객에게 도움이 되도록 10자 이상 적어주세요." style="margin-top:10px"></textarea>
         <div class="muted" style="font-size:12px;text-align:right"><span id="rvLen">0</span>/1000</div>
         <div class="error-text" id="rvErr"></div>`,
       okText: '리뷰 등록',

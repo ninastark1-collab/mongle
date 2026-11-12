@@ -59,12 +59,12 @@
 
   function title() {
     if (state.q) return `'${esc(state.q)}' 검색 결과`;
-    if (state.cat) return getCategory(state.cat)?.name || '전체 상품';
+    if (state.cat) return getCategory(state.cat)?.name || '모든 친구와 준비물';
     if (state.care === '초보 추천') return '🌱 처음 함께하기 좋은 친구들';
     if (state.stage === 'adult') return '🧓 의젓한 어른 친구들';
     if (state.live) return '🏡 가족을 기다리는 친구들';
     if (state.sort === 'discount') return '🔥 오늘의 특가';
-    return '전체 상품';
+    return '모든 친구와 준비물';
   }
 
   function syncUrl() {
@@ -153,7 +153,7 @@
     });
     $('#results').innerHTML = list.length
       ? `<div class="grid">${list.slice(0, shown).map(productCard).join('')}</div>
-         ${list.length > shown ? `<button class="btn load-more" id="more">상품 더보기 (${shown}/${list.length})</button>` : ''}`
+         ${list.length > shown ? `<button class="btn load-more" id="more">더 만나보기 (${shown}/${list.length})</button>` : ''}`
       : `<div class="empty card"><div class="ico">🐾</div><p>조건에 꼭 맞는 친구가 아직 없어요.<br>조건을 조금 풀어보거나, 다음 분양 알림을 받아보세요.</p><a class="btn btn-outline" href="products.html?live=1">모든 친구 만나보기</a></div>`;
     syncUrl();
     const more = $('#more');

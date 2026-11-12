@@ -1,7 +1,7 @@
 (function () {
   const p = getProduct(param('id'));
   if (!p) {
-    $('#app').innerHTML = `<div class="empty card"><div class="ico">😢</div><p>상품을 찾을 수 없어요. 삭제되었거나 잘못된 주소예요.</p><a class="btn btn-primary" href="index.html">홈으로</a></div>`;
+    $('#app').innerHTML = `<div class="empty card"><div class="ico">😢</div><p>친구를 찾을 수 없어요. 삭제되었거나 잘못된 주소예요.</p><a class="btn btn-primary" href="index.html">홈으로</a></div>`;
     return;
   }
   const hidden = p.status === 'hidden';
@@ -46,7 +46,7 @@
 
   $('#app').innerHTML = `
     <div class="breadcrumb"><a href="index.html">홈</a> › <a href="products.html?cat=${cat.id}">${cat.name}</a></div>
-    ${hidden ? '<div class="free-hint">⚠️ 현재 판매가 중지된 상품입니다.</div>' : ''}
+    ${hidden ? '<div class="free-hint">⚠️ 지금은 잠시 쉬고 있어요.</div>' : ''}
     <div class="detail">
       <div>${thumb(p, 'lg')}</div>
       <div>
@@ -60,7 +60,7 @@
         ${p.live
           ? `<div class="rating"><a href="#" id="toReviews">💌 입양 가족 후기 ${p.reviewCount.toLocaleString()}개</a></div>
              ${p.pet && p.pet.note ? `<div class="breeder-msg"><b>분양자 한마디</b>${esc(p.pet.note)}</div>` : ''}`
-          : `<div class="rating">${p.reviewCount ? `${stars(p.avgRating)} <strong>${p.avgRating}</strong> · <a href="#" id="toReviews">리뷰 ${p.reviewCount.toLocaleString()}개</a>` : '아직 리뷰가 없어요'}${p.sold ? ` · ${p.sold.toLocaleString()}개 구매` : ''}</div>
+          : `<div class="rating">${p.reviewCount ? `${stars(p.avgRating)} <strong>${p.avgRating}</strong> · <a href="#" id="toReviews">리뷰 ${p.reviewCount.toLocaleString()}개</a>` : '아직 리뷰가 없어요'}${p.sold ? ` · ${p.sold.toLocaleString()}개 담겼어요` : ''}</div>
         <div style="margin-top:14px">${priceBlock(p)}</div>
         ${!p.soldOut && !hidden ? `<div class="coupon-hint" id="couponHint"></div>` : ''}`}
 
@@ -88,10 +88,10 @@
           <dt>분양자</dt><dd>${esc(p.seller)}</dd>
         </dl>
         <div class="live-note">🐾 <strong>신청 전에 한 번만 더 생각해 주세요.</strong><br>이 친구와 ${esc(p.pet ? p.pet.lifespan : '')} 동안 함께할 수 있나요? 매달 사료·병원비와 매일의 돌봄 시간이 필요해요. 신청서를 읽고 아이와 잘 맞는 가족이라고 판단될 때 분양이 결정돼요.</div>` : `<dl class="ship-box">
-          <dt>배송</dt><dd>${p.fast ? `<strong style="color:var(--accent)">내일 ${arriveText} 도착 보장</strong> (밤 12시 전 주문 시)` : `${arriveText} 도착 예정`}</dd>
-          <dt>배송비</dt><dd>${p.freeShip ? '무료배송' : `${won(SHIPPING_FEE)} (${won(FREE_SHIPPING_MIN)} 이상 구매 시 무료)`}</dd>
-          <dt>적립</dt><dd>구매확정 시 ${won(Math.floor(p.price * POINT_RATE))} 적립 (${POINT_RATE * 100}%)</dd>
-          <dt>재고</dt><dd>${p.soldOut ? '<strong style="color:var(--danger)">일시품절</strong>' : p.stock <= 10 ? `<strong style="color:var(--danger)">품절임박! ${p.stock}개 남음</strong>` : '구매 가능'}</dd>
+          <dt>배송</dt><dd>${p.fast ? `<strong style="color:var(--accent)">내일 ${arriveText} 도착 보장</strong> (밤 12시 전 결제 시)` : `${arriveText} 도착 예정`}</dd>
+          <dt>배송비</dt><dd>${p.freeShip ? '무료배송' : `${won(SHIPPING_FEE)} (${won(FREE_SHIPPING_MIN)} 이상 담으면 무료)`}</dd>
+          <dt>적립</dt><dd>잘 받았다고 확인하면 ${won(Math.floor(p.price * POINT_RATE))} 적립 (${POINT_RATE * 100}%)</dd>
+          <dt>재고</dt><dd>${p.soldOut ? '<strong style="color:var(--danger)">일시품절</strong>' : p.stock <= 10 ? `<strong style="color:var(--danger)">품절임박! ${p.stock}개 남음</strong>` : '담을 수 있어요'}</dd>
           <dt>판매자</dt><dd>${esc(p.seller)}</dd>
         </dl>`}
 
@@ -104,7 +104,7 @@
           <div class="qty"><button id="minus" aria-label="수량 감소">−</button><input id="qty" value="1" inputmode="numeric" aria-label="수량"><button id="plus" aria-label="수량 증가">+</button></div>
         </div>
 
-        <div class="total-line"><span>${p.live ? '분양비 <span class="muted" style="font-size:12px;font-weight:400">(건강검진·접종·돌봄 비용)</span>' : '총 상품 금액'}</span><strong id="total">${p.live ? feeText(p.price) : won(p.price)}</strong></div>
+        <div class="total-line"><span>${p.live ? '분양비 <span class="muted" style="font-size:12px;font-weight:400">(건강검진·접종·돌봄 비용)</span>' : '준비물 금액'}</span><strong id="total">${p.live ? feeText(p.price) : won(p.price)}</strong></div>
         <div class="actions">
           <button class="btn" id="wish" aria-label="${p.live ? '관심 친구로 저장' : '찜하기'}" aria-pressed="${Wish.has(p.id)}">${Wish.has(p.id) ? '❤️' : '🤍'}</button>
           ${p.soldOut || hidden
@@ -112,16 +112,16 @@
               : `<button class="btn btn-primary btn-lg" id="restock" style="grid-column:span 2"></button>`)
             : p.live
               ? `<button class="btn btn-primary btn-lg" id="buyNow" style="grid-column:span 2">💌 입양 신청하기</button>`
-              : `<button class="btn btn-outline btn-lg" id="addCart">🧺 준비함에 담기</button>
-               <button class="btn btn-primary btn-lg" id="buyNow">바로구매</button>`}
+              : `<button class="btn btn-outline btn-lg" id="addCart">🧺 몽글바구니에 담기</button>
+               <button class="btn btn-primary btn-lg" id="buyNow">바로 받아보기</button>`}
         </div>
         ${p.live && (KIT[p.category] || []).length ? `<button class="btn btn-block kit-btn" id="kitBtn" style="margin-top:10px">🧺 이 친구 맞이 준비물 한 번에 담기 (${KIT[p.category].length}개)</button>` : ''}
-        <button class="link-btn" id="share" style="margin-top:12px">🔗 ${p.live ? '친구 소개 링크 복사' : '상품 링크 복사'}</button>
+        <button class="link-btn" id="share" style="margin-top:12px">🔗 ${p.live ? '친구 소개 링크 복사' : '링크 복사'}</button>
       </div>
     </div>
 
     <div class="tabs">
-      <button data-tab="desc" class="active">${p.live ? '친구 소개' : '상품정보'}</button>
+      <button data-tab="desc" class="active">${p.live ? '친구 소개' : '준비물 정보'}</button>
       <button data-tab="review">${p.live ? '입양 후기' : '리뷰'} (${p.reviewCount.toLocaleString()})</button>
       <button data-tab="qna">문의 (${qnaCount})</button>
       <button data-tab="ship">${p.live ? '인계/건강보증' : '배송/교환'}</button>
@@ -158,7 +158,7 @@
         <div style="max-width:420px;margin:20px auto">${thumb({ ...p, soldOut: false })}</div>
         <table class="info-table">
           <tr><th>카테고리</th><td>${cat.name}</td></tr>
-          <tr><th>${p.live ? '개체번호' : '상품번호'}</th><td>MG-${String(p.id).padStart(6, '0')}</td></tr>
+          <tr><th>${p.live ? '개체번호' : '용품번호'}</th><td>MG-${String(p.id).padStart(6, '0')}</td></tr>
           <tr><th>판매자</th><td>${esc(p.seller)}</td></tr>
           ${p.options.length ? `<tr><th>옵션</th><td>${p.options.map(esc).join(', ')}</td></tr>` : ''}
         </table>
@@ -171,8 +171,8 @@
           <div class="center"><div class="big">${p.avgRating}</div><div class="rating">${stars(p.avgRating)}</div></div>
           <div>${dist.map((d, i) => `<div class="bar"><span>${5 - i}점</span><div class="track"><div class="fill" style="width:${d * 100}%"></div></div><span class="muted">${Math.round(d * 100)}%</span></div>`).join('')}</div>
         </div>` : ''}
-        <p class="muted" style="font-size:13px">${p.live ? '입양 후기는 이 아이들의 형제·자매를 먼저 입양한 가족들이 남겨주신 이야기예요. 입양을 마친 가족은 마이페이지에서 후기를 남길 수 있어요.' : '리뷰는 상품을 구매하고 배송이 완료된 고객만 마이페이지 &gt; 주문내역에서 작성할 수 있어요.'}</p>
-        ${allReviews.length ? allReviews.map(r => `<div class="review"><div>${stars(r.score)} <strong>${esc(r.real ? maskName(r.name) : r.name)}</strong>${r.real ? ' <span class="tag tag-free">구매인증</span>' : ''}</div><div class="meta">${fmtDate(r.date)}${r.option ? ' · 옵션: ' + esc(r.option) : ''}</div><p style="margin:6px 0 0;white-space:pre-line">${esc(r.text)}</p></div>`).join('') : '<div class="empty"><div class="ico">✍️</div><p>첫 번째 리뷰의 주인공이 되어 주세요!</p></div>'}
+        <p class="muted" style="font-size:13px">${p.live ? '입양 후기는 이 아이들의 형제·자매를 먼저 입양한 가족들이 남겨주신 이야기예요. 입양을 마친 가족은 마이페이지에서 후기를 남길 수 있어요.' : '리뷰는 준비물을 받아본 가족만 마이페이지 &gt; 우리 아이 소식에서 남길 수 있어요.'}</p>
+        ${allReviews.length ? allReviews.map(r => `<div class="review"><div>${stars(r.score)} <strong>${esc(r.real ? maskName(r.name) : r.name)}</strong>${r.real ? ' <span class="tag tag-free">받아본 가족</span>' : ''}</div><div class="meta">${fmtDate(r.date)}${r.option ? ' · 옵션: ' + esc(r.option) : ''}</div><p style="margin:6px 0 0;white-space:pre-line">${esc(r.text)}</p></div>`).join('') : '<div class="empty"><div class="ico">✍️</div><p>첫 번째 리뷰의 주인공이 되어 주세요!</p></div>'}
       </div>
     </div>
     <div class="tab-panel hidden" id="tab-qna"><div class="card" id="qnaBox"></div></div>
@@ -182,21 +182,21 @@
           <tr><th>인계 방법</th><td>결제 후 매장 방문 수령 또는 전문 펫택시 직접 인계 (동물보호법에 따라 택배·화물 발송 없음)</td></tr>
           <tr><th>인계 시 제공</th><td>분양 계약서, 건강 기록(접종·구충), 먹던 사료 샘플, 키우는 방법 안내</td></tr>
           <tr><th>건강보증</th><td>인계 후 15일 이내 질병 발생 시 판매자가 치료 지원, 회복이 어렵거나 폐사 시 같은 종으로 교환 또는 환불 (소비자분쟁해결기준)</td></tr>
-          <tr><th>주문취소</th><td>인계 준비 전(결제완료·배송준비중)까지 마이페이지에서 바로 취소할 수 있어요.</td></tr>
+          <tr><th>취소</th><td>인계 준비 전(결제완료·배송준비중)까지 마이페이지에서 바로 취소할 수 있어요.</td></tr>
           <tr><th>반품 불가</th><td>반려동물은 생명이므로 단순 변심에 따른 반품·환불이 불가해요.</td></tr>
         </table>` : `<table class="info-table">
           <tr><th>배송 방법</th><td>택배 (${p.fast ? '내일도착 전용 배송' : '일반 배송'})</td></tr>
           <tr><th>배송비</th><td>${p.freeShip ? '무료' : `${won(SHIPPING_FEE)}, ${won(FREE_SHIPPING_MIN)} 이상 무료`}</td></tr>
-          <tr><th>주문취소</th><td>배송준비중 단계까지 마이페이지에서 바로 취소할 수 있어요.</td></tr>
-          <tr><th>교환/반품</th><td>상품 수령 후 7일 이내 신청 가능. 단순 변심 시 왕복 배송비 6,000원 고객 부담</td></tr>
-          <tr><th>교환/반품 불가</th><td>사용·훼손으로 상품 가치가 떨어진 경우, 신선식품 등 재판매가 어려운 경우</td></tr>
+          <tr><th>취소</th><td>배송준비중 단계까지 마이페이지에서 바로 취소할 수 있어요.</td></tr>
+          <tr><th>교환/반품</th><td>받은 뒤 7일 안에 신청할 수 있어요. 단순 변심 시 왕복 배송비 6,000원 고객 부담</td></tr>
+          <tr><th>교환/반품 불가</th><td>사용·훼손으로 준비물 가치가 떨어진 경우, 신선식품 등 재판매가 어려운 경우</td></tr>
         </table>`}
       </div>
     </div>
 
     ${related.length ? `
     <section class="section">
-      <div class="section-head"><h2>함께 보면 좋은 상품</h2><a href="products.html?cat=${cat.id}">더보기 ›</a></div>
+      <div class="section-head"><h2>${p.live ? '함께 만나보면 좋은 친구들' : '함께 보면 좋은 준비물'}</h2><a href="products.html?cat=${cat.id}">더보기 ›</a></div>
       <div class="grid">${related.map(productCard).join('')}</div>
     </section>` : ''}
   `;
@@ -206,7 +206,7 @@
     const u = Auth.current();
     const list = QnA.forProduct(p.id);
     $('#qnaBox').innerHTML = `
-      <div class="toolbar"><strong>상품 문의 ${list.length}건</strong><button class="btn btn-sm btn-outline" id="askBtn">문의하기</button></div>
+      <div class="toolbar"><strong>궁금해요 ${list.length}건</strong><button class="btn btn-sm btn-outline" id="askBtn">문의하기</button></div>
       <p class="muted" style="font-size:13px">비밀글로 작성하면 작성자와 판매자만 볼 수 있어요. 개인정보(연락처·주소)는 적지 마세요.</p>
       ${list.length ? list.map(q => {
         const canSee = !q.secret || (u && (u.email === q.email || u.email === p.sellerEmail));
@@ -220,8 +220,8 @@
     $('#askBtn').addEventListener('click', () => {
       if (!Auth.current()) { toast('로그인 후 문의할 수 있어요.', loginUrl(), '로그인'); return; }
       modal({
-        title: '상품 문의하기',
-        body: `<textarea class="input" id="qText" rows="4" maxlength="500" placeholder="상품에 대해 궁금한 점을 적어주세요. (5자 이상)"></textarea>
+        title: '궁금한 점 물어보기',
+        body: `<textarea class="input" id="qText" rows="4" maxlength="500" placeholder="궁금한 점을 적어주세요. (5자 이상)"></textarea>
           <label class="check" style="margin-top:8px;font-size:14px"><input type="checkbox" id="qSecret"> 🔒 비밀글로 문의</label><div class="error-text" id="qErr"></div>`,
         okText: '등록',
         onOk: w => {
@@ -246,7 +246,7 @@
     return Math.min(maxQty, n);
   }
   function setQty(n) {
-    if (n > maxQty) toast(`최대 ${maxQty}개까지 구매할 수 있어요.`);
+    if (n > maxQty) toast(`최대 ${maxQty}개까지 담을 수 있어요.`);
     qtyEl.value = Math.min(maxQty, Math.max(1, n));
     $('#total').textContent = won(p.price * getQty());
   }
@@ -274,8 +274,8 @@
       const before = (Cart.items().find(i => i.key === key) || {}).qty || 0;
       const after = Cart.add(p.id, opt, want);
       if (!after) toast('방금 품절되어 담을 수 없어요.');
-      else if (after < before + want) toast(`재고가 부족해 ${after}개까지만 담았어요.`, 'cart.html', '준비함 보기');
-      else toast(before ? `준비함에 있던 준비물을 ${after}개로 늘렸어요.` : '입양 준비함에 담았어요. 🧺', 'cart.html', '준비함 보기');
+      else if (after < before + want) toast(`재고가 부족해 ${after}개까지만 담았어요.`, 'cart.html', '바구니 보기');
+      else toast(before ? `몽글바구니에 있던 준비물을 ${after}개로 늘렸어요.` : '몽글바구니에 담았어요. 🧺', 'cart.html', '바구니 보기');
     });
   }
   // 바로구매 / 입양 신청 (반려동물은 장바구니 버튼이 없음)
@@ -292,7 +292,7 @@
   const kitBtn = $('#kitBtn');
   if (kitBtn) kitBtn.addEventListener('click', () => {
     const n = (KIT[p.category] || []).filter(([id, opt]) => Cart.add(id, opt, 1)).length;
-    toast(n ? `준비물 ${n}개를 입양 준비함에 담았어요. 🧺` : '지금은 담을 수 있는 준비물이 없어요.', 'cart.html', '준비함 보기');
+    toast(n ? `준비물 ${n}개를 몽글바구니에 담았어요. 🧺` : '지금은 담을 수 있는 준비물이 없어요.', 'cart.html', '바구니 보기');
   });
   const jump = $('[data-jump]');
   if (jump) jump.addEventListener('click', e => {
@@ -355,7 +355,7 @@
   });
 
   $('#share').addEventListener('click', async () => {
-    try { await navigator.clipboard.writeText(location.href); toast('상품 링크를 복사했어요.'); }
+    try { await navigator.clipboard.writeText(location.href); toast('링크를 복사했어요.'); }
     catch (e) { toast('링크 복사를 지원하지 않는 환경이에요.'); }
   });
 

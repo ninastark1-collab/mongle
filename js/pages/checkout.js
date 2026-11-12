@@ -5,7 +5,7 @@
   const lines = (co && co.items || []).map(i => ({ ...i, product: getProduct(i.id) })).filter(l => l.product);
 
   if (!lines.length) {
-    $('#app').innerHTML = `<div class="empty card"><div class="ico">🧾</div><p>신청하거나 주문할 내용이 없어요.</p><a class="btn btn-primary" href="cart.html">준비함으로 가기</a></div>`;
+    $('#app').innerHTML = `<div class="empty card"><div class="ico">🧾</div><p>아직 신청하거나 받아볼 내용이 없어요.</p><a class="btn btn-primary" href="cart.html">몽글바구니로 가기</a></div>`;
     return;
   }
 
@@ -23,7 +23,7 @@
   const lastDay = new Date(Date.now() + 21 * 86400000).toISOString().slice(0, 10);
 
   $('#app').innerHTML = `
-    <h1 class="page-title">${hasLive ? '💌 입양 신청서' : '주문/결제'}</h1>
+    <h1 class="page-title">${hasLive ? '💌 입양 신청서' : '🧺 준비물 받아보기'}</h1>
     ${hasLive ? `<div class="adopt-steps-bar"><span class="on">① 신청서</span><span>② 만남</span><span>③ 승인 후 분양비 결제</span><span>④ 인계</span></div>
     <p class="muted" style="margin:0 0 20px">아이에게 꼭 맞는 가족을 찾기 위해 몇 가지만 여쭤볼게요. <b>지금은 결제하지 않아요.</b> 직접 만나보고 분양자가 승인한 뒤에 분양비를 결제해요.</p>` : ''}
     <div class="cart-layout">
@@ -104,7 +104,7 @@
         </section>` : ''}
 
         <section class="card co-section">
-          <h2>${liveOnly ? '입양을 신청하는 친구' : `주문 상품 (${lines.length}개)`}</h2>
+          <h2>${liveOnly ? '입양을 신청하는 친구' : `준비물 (${lines.length}개)`}</h2>
           ${lines.map(l => `
             <div class="co-item">
               ${thumb(l.product, 'sm')}
@@ -124,7 +124,7 @@
         <section class="card co-section ${liveOnly ? 'hidden' : ''}">
           <h2>적립금</h2>
           <div class="point-row"><input class="input" id="pointInput" type="number" min="0" step="100" placeholder="0" ${myPoints ? '' : 'disabled'}><button class="btn" id="pointAll" ${myPoints ? '' : 'disabled'}>전액 사용</button></div>
-          <div class="muted" style="font-size:13px;margin-top:6px">보유 적립금 <strong>${won(myPoints)}</strong> · 구매확정 시 결제금액의 ${POINT_RATE * 100}%가 적립돼요.</div>
+          <div class="muted" style="font-size:13px;margin-top:6px">보유 적립금 <strong>${won(myPoints)}</strong> · 잘 받았다고 확인하면 결제금액의 ${POINT_RATE * 100}%가 적립돼요.</div>
         </section>
 
         <section class="card co-section ${liveOnly ? 'hidden' : ''}">
@@ -142,7 +142,7 @@
       <aside class="card summary">
         <h3>${liveOnly ? '분양비 안내' : '결제 금액'}</h3>
         <div id="sum"></div>
-        <label class="check" style="font-size:13px;margin-top:12px"><input type="checkbox" id="agree"> ${liveOnly ? '신청 내용이 사실임을 확인합니다 (필수)' : '주문 내용을 확인했으며 결제에 동의합니다 (필수)'}</label>
+        <label class="check" style="font-size:13px;margin-top:12px"><input type="checkbox" id="agree"> ${liveOnly ? '신청 내용이 사실임을 확인합니다 (필수)' : '준비물 내용을 확인했고 결제에 동의해요 (필수)'}</label>
         ${liveOnly ? '<p class="muted" style="font-size:12px;margin:8px 0 0">💡 지금은 결제하지 않아요. 만남 후 분양자가 승인하면 마이페이지에서 분양비를 결제해요.</p>' : ''}
         <div class="error-text" id="agreeErr"></div>
         <button class="btn btn-primary btn-lg btn-block" id="payBtn" style="margin-top:12px"></button>
@@ -155,13 +155,13 @@
       ${liveOnly
         ? `<div class="sum-row"><span>분양비 (건강검진·접종·돌봄)</span><span>${won(t.subtotal)}</span></div>
            <div class="sum-row"><span>인계비</span><span>무료</span></div>`
-        : `<div class="sum-row"><span>상품금액</span><span>${won(t.originTotal)}</span></div>
-      <div class="sum-row"><span>상품할인</span><span style="color:var(--danger)">-${won(t.saved)}</span></div>
+        : `<div class="sum-row"><span>준비물 금액</span><span>${won(t.originTotal)}</span></div>
+      <div class="sum-row"><span>준비물 할인</span><span style="color:var(--danger)">-${won(t.saved)}</span></div>
       <div class="sum-row"><span>쿠폰할인</span><span style="color:var(--danger)">-${won(t.couponDiscount)}</span></div>
       <div class="sum-row"><span>적립금 사용</span><span style="color:var(--danger)">-${won(t.pointsUsed)}</span></div>
       <div class="sum-row"><span>배송비</span><span>${t.shipping ? '+' + won(t.shipping) : '무료'}</span></div>`}
       <div class="sum-row total"><span>${liveOnly ? '승인 후 결제할 분양비' : '최종 결제금액'}</span><span>${liveOnly ? feeText(t.total) : won(t.total)}</span></div>
-      ${liveOnly ? '' : `<div class="muted" style="font-size:13px;text-align:right">구매확정 시 ${won(Math.floor(lines.filter(l => !l.product.live).reduce((s, l) => s + l.product.price * l.qty, 0) * POINT_RATE))} 적립 예정</div>`}`;
+      ${liveOnly ? '' : `<div class="muted" style="font-size:13px;text-align:right">잘 받았다고 확인하면 ${won(Math.floor(lines.filter(l => !l.product.live).reduce((s, l) => s + l.product.price * l.qty, 0) * POINT_RATE))} 적립 예정</div>`}`;
     $('#payBtn').textContent = liveOnly ? '💌 입양 신청서 보내기' : hasLive ? `💌 입양 신청하기 · ${won(t.total)}` : `${won(t.total)} 결제하기`;
     return t;
   }
@@ -193,7 +193,7 @@
     $('#couponSel').innerHTML = `<option value="">${mine.length ? '쿠폰 사용 안 함' : '사용 가능한 쿠폰이 없어요'}</option>` + mine.map(c => {
       const def = COUPONS[c.code];
       const can = sub0 >= def.min;
-      return `<option value="${c.code}" ${can ? '' : 'disabled'} ${c.code === selected ? 'selected' : ''}>${esc(def.label)}${can ? ` → -${won(calcTotals(lines, c.code).couponDiscount)}` : ` (${won(def.min)} 이상 구매 시)`}</option>`;
+      return `<option value="${c.code}" ${can ? '' : 'disabled'} ${c.code === selected ? 'selected' : ''}>${esc(def.label)}${can ? ` → -${won(calcTotals(lines, c.code).couponDiscount)}` : ` (${won(def.min)} 이상 담으면)`}</option>`;
     }).join('');
     setCoupon(selected);
   }
@@ -215,7 +215,7 @@
     if (sub0 < COUPONS[code].min) {
       paintCoupons(coupon);
       msg.className = 'error-text';
-      msg.textContent = `쿠폰함에 등록했어요. 이 쿠폰은 ${won(COUPONS[code].min)} 이상 구매 시 쓸 수 있어요.`;
+      msg.textContent = `쿠폰함에 등록했어요. 이 쿠폰은 ${won(COUPONS[code].min)} 이상 담으면 쓸 수 있어요.`;
       return;
     }
     paintCoupons(code);
@@ -285,16 +285,16 @@
     // 결제 직전 재검증: 이미 결제된 주문서 / 재고 / 판매상태
     const pending = Store.get('checkout', null);
     if (!pending || !pending.items || !pending.items.length) {
-      toast('이미 처리된 주문서예요. 주문내역을 확인해 주세요.', 'mypage.html', '주문내역');
+      toast('이미 접수된 내용이에요. 우리 아이 소식에서 확인해 주세요.', 'mypage.html', '소식 보기');
       return;
     }
     for (const l of lines) {
       const cur = getProduct(l.id);
       if (!cur || cur.status === 'hidden' || cur.stock < l.qty) {
         modal({
-          title: '구매할 수 없는 상품이 있어요',
-          body: `<p><b>${esc(l.product.name)}</b><br>${!cur || cur.status === 'hidden' ? '판매가 중지되었어요.' : `남은 재고가 ${cur.stock}개예요.`}<br>준비함에서 수량을 조정해 주세요.</p>`,
-          okText: '준비함으로', cancelText: '',
+          title: '지금 담을 수 없는 준비물이 있어요',
+          body: `<p><b>${esc(l.product.name)}</b><br>${!cur || cur.status === 'hidden' ? '판매가 중지되었어요.' : `남은 재고가 ${cur.stock}개예요.`}<br>몽글바구니에서 수량을 맞춰 주세요.</p>`,
+          okText: '몽글바구니로', cancelText: '',
           onOk: () => { location.href = 'cart.html'; },
         });
         return;

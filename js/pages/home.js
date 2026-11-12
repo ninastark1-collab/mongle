@@ -43,7 +43,7 @@
         </div>
         <div class="cta">
           <a class="btn btn-sage btn-lg" href="products.html?live=1">가족을 기다리는 친구들 →</a>
-          ${user ? '' : '<a class="btn btn-outline btn-lg" href="signup.html">가입하고 2,000P 받기</a>'}
+          <button type="button" class="btn btn-outline btn-lg" data-quiz>🧩 나와 맞는 친구 찾기</button>
         </div>
         <div class="hero-pics" aria-hidden="true">${heroPics.map(p => `<img src="${safeImage(p.image)}" alt="">`).join('')}</div>
       </div>
@@ -61,7 +61,7 @@
 
     <section class="section">
       <div class="quiz-band">
-        <div><div class="eyebrow">Find your match</div><h2>어떤 친구가 우리 집과 잘 맞을까?</h2><p>사는 곳, 혼자 있는 시간, 산책 시간까지 6가지만 답해 주세요.</p></div>
+        <div><div class="eyebrow">Find your match</div><h2>어떤 친구가 우리 집과 잘 맞을까?</h2><p>가족, 집, 혼자 있는 시간, 예산까지 10가지만 답하면 1분 만에 찾아드려요.</p></div>
         <button class="btn btn-primary btn-lg" data-quiz>🧩 나와 꼭 맞는 친구 찾기</button>
       </div>
     </section>
@@ -94,7 +94,7 @@
         <div style="position:relative;z-index:1">
           <div class="eyebrow">⏰ Time sale · 오늘 자정까지</div>
           <h2>펫 용품 타임세일 15% 쿠폰</h2>
-          <p>새 가족 맞이 준비물까지 한 번에! 5만원 이상 구매 시 최대 15,000원 할인</p>
+          <p>새 가족 맞이 준비물까지 한 번에! 5만원 이상 담으면 최대 15,000원 할인</p>
         </div>
         <div class="td-right">
           <div class="td-clock" data-cd aria-label="타임세일 종료까지 남은 시간">--:--:--</div>
