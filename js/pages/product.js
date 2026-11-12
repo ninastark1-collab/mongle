@@ -85,7 +85,7 @@
           <dt>건강보증</dt><dd>인계 후 15일 안에 아프면 치료를 지원하고, 슬픈 일이 생기면 끝까지 책임지고 도와드려요</dd>
           <dt>분양 절차</dt><dd>신청서 → <b>먼저 만나보기</b> → 승인 후 분양비 결제 → 직접 인계</dd>
           <dt>돌아오기 약속</dt><dd>🤝 함께하기 어려워지면 버리지 말고 몽글로 돌아와요. 새 가족을 함께 찾아드려요.</dd>
-          <dt>분양 상태</dt><dd>${p.soldOut ? '<strong>💛 새 가족을 만났어요</strong>' : '<strong style="color:var(--forest)">🏡 가족을 기다리고 있어요</strong>'}</dd>
+          <dt>분양 상태</dt><dd>${adoptState(p) === 'pending' ? '<strong>💬 지금 다른 가족과 입양 상담 중이에요</strong>' : p.soldOut ? '<strong>💛 새 가족을 만났어요</strong>' : '<strong style="color:var(--forest)">🏡 가족을 기다리고 있어요</strong>'}</dd>
           <dt>분양자</dt><dd>${esc(p.seller)}</dd>
         </dl>
         <div class="live-note">🐾 <strong>신청 전에 한 번만 더 생각해 주세요.</strong><br>이 친구와 ${esc(p.pet ? p.pet.lifespan : '')} 동안 함께할 수 있나요? 매달 사료·병원비와 매일의 돌봄 시간이 필요해요. 신청서를 읽고 아이와 잘 맞는 가족이라고 판단될 때 분양이 결정돼요.</div>` : `<dl class="ship-box">
@@ -107,10 +107,10 @@
 
         ${p.live && p.fee ? `<div class="fee-card">
           <div class="fee-head"><span>${p.fee.type === '책임비' ? '🤝 책임비' : '🏷️ 분양비'}</span><strong id="total">${feeText(p.price)}</strong></div>
-          <div class="fee-range" aria-label="국내 일반 시세 범위">
+          ${p.fee.noRange ? '' : `<div class="fee-range" aria-label="국내 일반 시세 범위">
             <div class="fee-bar"><i style="left:${Math.round(p.fee.pos * 100)}%"></i></div>
             <div class="fee-scale"><span>${feeText(p.fee.lo)}</span><span class="muted">${esc(getCategory(p.category).name)} · ${esc(p.name.split(' · ')[0])} 일반 시세</span><span>${feeText(p.fee.hi)}</span></div>
-          </div>
+          </div>`}
           <p class="fee-why">${esc(p.fee.why)}</p>
           <div class="fee-inc">${p.fee.includes.map(t => `<span>✓ ${esc(t)}</span>`).join('')}</div>
         </div>` : `<div class="total-line"><span>준비물 금액</span><strong id="total">${won(p.price)}</strong></div>`}
@@ -131,7 +131,7 @@
 
     <div class="tabs">
       <button data-tab="desc" class="active">${p.live ? '친구 소개' : '준비물 정보'}</button>
-      <button data-tab="review">${p.live ? '입양 후기' : '리뷰'} (${p.reviewCount.toLocaleString()})</button>
+      <button data-tab="review">${p.live ? '우리 아이 근황' : '리뷰'} (${p.reviewCount.toLocaleString()})</button>
       <button data-tab="qna">문의 (${qnaCount})</button>
       <button data-tab="ship">${p.live ? '인계/건강보증' : '배송/교환'}</button>
     </div>
@@ -175,13 +175,13 @@
     </div>
     <div class="tab-panel hidden" id="tab-review">
       <div class="card">
-        ${p.reviewCount ? `
+        ${p.reviewCount && !p.live ? `
         <div class="review-summary">
           <div class="center"><div class="big">${p.avgRating}</div><div class="rating">${stars(p.avgRating)}</div></div>
           <div>${dist.map((d, i) => `<div class="bar"><span>${5 - i}점</span><div class="track"><div class="fill" style="width:${d * 100}%"></div></div><span class="muted">${Math.round(d * 100)}%</span></div>`).join('')}</div>
         </div>` : ''}
         <p class="muted" style="font-size:13px">${p.live ? '입양 후기는 이 아이들의 형제·자매를 먼저 입양한 가족들이 남겨주신 이야기예요. 입양을 마친 가족은 마이페이지에서 후기를 남길 수 있어요.' : '리뷰는 준비물을 받아본 가족만 마이페이지 &gt; 우리 아이 소식에서 남길 수 있어요.'}</p>
-        ${allReviews.length ? allReviews.map(r => `<div class="review"><div>${stars(r.score)} <strong>${esc(r.real ? maskName(r.name) : r.name)}</strong>${r.real ? ' <span class="tag tag-free">받아본 가족</span>' : ''}</div><div class="meta">${fmtDate(r.date)}${r.option ? ' · 옵션: ' + esc(r.option) : ''}</div><p style="margin:6px 0 0;white-space:pre-line">${esc(r.text)}</p></div>`).join('') : (p.live ? '<div class="empty"><div class="ico">💌</div><p>아직 입양 후기가 없어요.<br>이 아이와 가족이 되면 첫 이야기를 들려주세요.</p></div>' : '<div class="empty"><div class="ico">✍️</div><p>첫 번째 리뷰의 주인공이 되어 주세요!</p></div>')}
+        ${allReviews.length ? allReviews.map(r => p.live ? `<div class="review story-review"><div>💛 <strong>${esc(maskName(r.name || '입양 가족'))} 가족의 근황</strong> <span class="muted" style="font-size:12px">${fmtDate(r.date)}</span></div>${(r.moods || []).length ? `<div class="chip-wrap" style="margin:6px 0">${r.moods.map(m => `<span class="trait">${esc(m)}</span>`).join('')}</div>` : ''}${safeImage(r.photo) ? `<img class="story-photo" src="${safeImage(r.photo)}" alt="우리 아이 근황 사진">` : ''}<p style="margin:6px 0 0;white-space:pre-line">${esc(r.text)}</p></div>` : `<div class="review"><div>${stars(r.score)} <strong>${esc(r.real ? maskName(r.name) : r.name)}</strong>${r.real ? ' <span class="tag tag-free">받아본 가족</span>' : ''}</div><div class="meta">${fmtDate(r.date)}${r.option ? ' · 옵션: ' + esc(r.option) : ''}</div><p style="margin:6px 0 0;white-space:pre-line">${esc(r.text)}</p></div>`).join('') : (p.live ? '<div class="empty"><div class="ico">💌</div><p>아직 입양 후기가 없어요.<br>이 아이와 가족이 되면 첫 이야기를 들려주세요.</p></div>' : '<div class="empty"><div class="ico">✍️</div><p>첫 번째 리뷰의 주인공이 되어 주세요!</p></div>')}
       </div>
     </div>
     <div class="tab-panel hidden" id="tab-qna"><div class="card" id="qnaBox"></div></div>
@@ -316,13 +316,16 @@
     const paintRs = () => {
       const u = Auth.current();
       const on = u && Restock.has(p.id, u.email);
-      rs.textContent = on ? `🔔 ${p.live ? '분양 대기' : '재입고 알림'} 신청됨 (취소하려면 클릭)` : `🔔 ${p.live ? '다음 분양 알림 받기' : '재입고 알림 신청'}`;
+      const pend = adoptState(p) === 'pending';
+      rs.textContent = on
+        ? `🔔 ${p.live ? (pend ? '대기 중이에요' : '다음 분양 알림을 신청했어요') : '재입고 알림을 신청했어요'} (취소하려면 클릭)`
+        : `🔔 ${p.live ? (pend ? '상담이 끝나면 알려주세요 (대기 신청)' : '다음 분양 알림 받기') : '재입고 알림 신청'}`;
       rs.classList.toggle('btn-primary', !on);
     };
     rs.addEventListener('click', () => {
       const u = Auth.current();
       if (!u) { toast('로그인 후 재입고 알림을 신청할 수 있어요.', loginUrl(), '로그인'); return; }
-      toast(Restock.toggle(p.id, u.email) ? (p.live ? '새 친구가 분양 가능해지면 알림함으로 알려드릴게요!' : '재입고되면 알림함으로 바로 알려드릴게요!') : '재입고 알림을 취소했어요.');
+      toast(Restock.toggle(p.id, u.email) ? (p.live ? (adoptState(p) === 'pending' ? '상담이 끝나 이 아이가 다시 가족을 기다리게 되면 바로 알려드릴게요!' : '새 친구가 분양 가능해지면 알림함으로 알려드릴게요!') : '재입고되면 알림함으로 바로 알려드릴게요!') : '재입고 알림을 취소했어요.');
       paintRs();
     });
     paintRs();

@@ -39,7 +39,7 @@
             <div style="text-align:right"><span class="status s-${i.status}">${statusLabel(i.status, i.live)}</span>
               <div class="item-actions">
                 ${i.status === '배송완료' ? `<button class="btn btn-sm btn-primary" data-confirm="${esc(o.no)}" data-idx="${idx}" data-live="${i.live ? 1 : ''}">${i.live ? '입양 완료' : '잘 받았어요'}</button><button class="btn btn-sm" data-return="${esc(o.no)}" data-idx="${idx}">${i.live ? '건강보증 신청' : '교환·환불'}</button>` : ''}
-                ${['배송완료', '구매확정'].includes(i.status) && !i.reviewed && p ? `<button class="btn btn-sm btn-outline" data-review="${esc(o.no)}" data-idx="${idx}">${i.live ? '입양 후기' : '리뷰쓰기'}</button>` : ''}
+                ${['배송완료', '구매확정'].includes(i.status) && !i.reviewed && p ? `<button class="btn btn-sm btn-outline" data-review="${esc(o.no)}" data-idx="${idx}">${i.live ? '💌 근황 남기기' : '리뷰쓰기'}</button>` : ''}
                 ${i.reviewed ? '<span class="muted" style="font-size:12px">리뷰 작성완료</span>' : ''}
                 ${i.live && ['배송완료', '구매확정'].includes(i.status) && !i.rehome ? `<button class="btn btn-sm" data-rehome="${esc(o.no)}" data-idx="${idx}">함께하기 어려워졌어요</button>` : ''}
                 ${!i.live && ['배송완료', '구매확정'].includes(i.status) && p && p.status !== 'hidden' && !p.soldOut ? `<button class="btn btn-sm" data-rebuy="${i.id}" data-opt="${esc(i.option)}">다시 담기</button>` : ''}
@@ -324,9 +324,64 @@
     $('#rtReason', w).addEventListener('change', e => { $('#rtPreview', w).innerHTML = preview(e.target.value); });
   }
 
+  // 반려동물: 별점 대신 '우리 아이 근황' (한마디 + 사진 + 요즘 모습)
+  function openStory(no, idx) {
+    const o = Orders.find(no);
+    const it = o.items[idx];
+    const MOODS = ['잘 먹어요 🍚', '잘 자요 😴', '장난꾸러기예요 🎾', '애교쟁이예요 💕', '가족과 친해졌어요 🏡', '산책을 좋아해요 🐾'];
+    const picked = new Set();
+    let photo = '';
+    const w = modal({
+      title: '💌 우리 아이 근황 남기기',
+      body: `<p style="margin-top:0"><b>${esc(it.name.split(' · ')[0])}</b>는(은) 요즘 어떻게 지내나요?<br><span class="muted" style="font-size:13px">별점은 없어요. 아이의 이야기를 들려주세요. 다음 가족에게 큰 힘이 돼요.</span></p>
+        <div class="q-title" style="font-weight:600;font-size:13px;margin-bottom:6px">요즘 우리 아이는</div>
+        <div class="quiz-chips">${MOODS.map(m => `<button type="button" class="quiz-chip" data-mood="${esc(m)}">${esc(m)}</button>`).join('')}</div>
+        <textarea class="input" id="rvText" rows="4" maxlength="1000" placeholder="집에 온 뒤 달라진 모습, 좋아하는 놀이, 첫날의 기억 등을 적어주세요. (10자 이상)" style="margin-top:12px"></textarea>
+        <div class="muted" style="font-size:12px;text-align:right"><span id="rvLen">0</span>/1000</div>
+        <label style="font-weight:600;font-size:13px">📷 사진 한 장 (선택)</label>
+        <input type="file" id="rvPhoto" accept="image/png,image/jpeg,image/webp">
+        <div id="rvPrev" style="margin-top:8px"></div>
+        <div class="error-text" id="rvErr"></div>`,
+      okText: '근황 남기기',
+      onOk: wrap => {
+        const text = $('#rvText', wrap).value.trim();
+        if (text.length < 10) { $('#rvErr', wrap).textContent = '아이 이야기를 10자 이상 들려주세요.'; return false; }
+        const u = Auth.current();
+        Reviews.add({ productId: it.id, orderNo: no, email: u.email, name: u.name, score: 5, text, option: it.option, moods: [...picked], photo, story: true });
+        Orders.markReviewed(no, idx);
+        toast('따뜻한 근황 고마워요! 💛', 'product.html?id=' + it.id + '&tab=review', '근황 보기');
+        render();
+      },
+    });
+    $$('[data-mood]', w).forEach(b => b.addEventListener('click', () => {
+      const m = b.dataset.mood;
+      if (picked.has(m)) picked.delete(m); else picked.add(m);
+      b.classList.toggle('on', picked.has(m));
+    }));
+    $('#rvText', w).addEventListener('input', e => { $('#rvLen', w).textContent = e.target.value.length; });
+    $('#rvPhoto', w).addEventListener('change', e => {
+      const file = e.target.files[0];
+      if (!file) return;
+      if (!/^image\/(png|jpeg|webp)$/.test(file.type) || file.size > 10 * 1024 * 1024) { toast('10MB 이하 사진만 올릴 수 있어요.'); e.target.value = ''; return; }
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const scale = Math.min(1, 480 / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+        const ctx = c.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height); ctx.drawImage(img, 0, 0, c.width, c.height);
+        photo = c.toDataURL('image/jpeg', 0.8);
+        URL.revokeObjectURL(url);
+        $('#rvPrev', w).innerHTML = `<img src="${safeImage(photo)}" alt="미리보기" style="max-width:160px;border-radius:14px">`;
+      };
+      img.src = url;
+    });
+  }
+
   function openReview(no, idx) {
     const o = Orders.find(no);
     const it = o.items[idx];
+    if (it.live) return openStory(no, idx);
     let score = 5;
     const w = modal({
       title: '리뷰 쓰기',

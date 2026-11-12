@@ -49,13 +49,31 @@ function safeImage(src) {
   return '';
 }
 
+// 입양 상태: waiting(가족을 기다려요) · pending(입양 상담 중) · adopted(새 가족을 만났어요)
+let _pendIds = null, _pendAt = 0;
+function adoptState(p) {
+  if (!p || !p.live) return '';
+  if (!p.soldOut) return 'waiting';
+  if (!_pendIds || Date.now() - _pendAt > 1000) {
+    _pendIds = new Set();
+    _pendAt = Date.now();
+    try {
+      Store.get('orders', []).forEach(o => o.items.forEach(i => {
+        if (i.live && ['결제완료', '배송준비중', '배송중'].includes(i.status)) _pendIds.add(i.id);
+      }));
+    } catch (e) { /* 무시 */ }
+  }
+  return _pendIds.has(p.id) ? 'pending' : 'adopted';
+}
+const ADOPT_LABEL = { pending: '💬 입양 상담 중', adopted: '💛 새 가족을 만났어요' };
+
 function thumb(p, size = '') {
   const img = safeImage(p.image);
   const hex = c => (typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : null);
   const g = p.gradient && hex(p.gradient[0]) && hex(p.gradient[1]) ? p.gradient : ['#f1f5f9', '#e2e8f0'];
   return `<div class="thumb ${size}" style="background:linear-gradient(135deg, ${g[0]}, ${g[1]})">
     ${img ? `<img src="${img}" alt="${esc(p.name)}" loading="lazy">` : `<span class="emoji" role="img" aria-label="${esc(p.name)}">${esc(p.emoji || '📦')}</span>`}
-    ${p.soldOut ? `<span class="soldout-cover">${p.live ? '💛 새 가족을 만났어요' : '일시품절'}</span>` : ''}</div>`;
+    ${p.soldOut ? `<span class="soldout-cover ${adoptState(p) === 'pending' ? 'pend' : ''}">${p.live ? ADOPT_LABEL[adoptState(p)] : '일시품절'}</span>` : ''}</div>`;
 }
 
 function priceBlock(p) {
@@ -83,7 +101,7 @@ function petCard(p) {
         <div class="tags">
           ${p.isNew && !p.soldOut ? '<span class="tag tag-new">🍼 새로 왔어요</span>' : ''}
           ${p.pet && p.pet.adult && !p.soldOut ? '<span class="tag tag-adult">🧓 의젓한 어른 친구</span>' : ''}
-          ${p.soldOut ? '<span class="tag tag-home">💛 가족을 찾았어요</span>' : '<span class="tag tag-wait">🏡 가족을 기다려요</span>'}
+          ${adoptState(p) === 'pending' ? '<span class="tag tag-pend">💬 입양 상담 중</span>' : p.soldOut ? '<span class="tag tag-home">💛 가족을 찾았어요</span>' : '<span class="tag tag-wait">🏡 가족을 기다려요</span>'}
           <span class="tag tag-free">🩺 15일 건강보증</span>
         </div>
         ${p.sellerEmail ? `<div class="seller-name">분양자 · ${esc(p.seller)}</div>` : ''}
@@ -519,6 +537,10 @@ function openQuiz() {
 // 화면 구석의 퀴즈 버튼 (누른 사람에게만 퀴즈가 열려요)
 function setupQuizInvite() {
   if ($('.quiz-fab')) return;
+  // 신청서·결제·정책·로그인 화면에서는 띄우지 않아요
+  const page = location.pathname.split('/').pop() || 'index.html';
+  if (['checkout.html', 'order-complete.html', 'login.html', 'signup.html', 'seller.html', 'terms.html'].includes(page)) return;
+  document.body.classList.add('has-fab');
   const fab = document.createElement('button');
   fab.type = 'button';
   fab.className = 'quiz-fab';

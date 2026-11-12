@@ -967,3 +967,25 @@ h1, h2, h3, .logo, .section-head h2, h1.page-title, .bento h3, .cta-band h3, .ti
 .biz-info { margin-top: 18px; font-size: 12px; color: #a0857f; line-height: 1.6; }
 .footer-bottom a { text-decoration: underline; text-underline-offset: 2px; }
 .policy p { line-height: 1.7; }
+
+/* v17: 입양 상담 중 · 근황 · 떠 있는 버튼 정리 · 글자 대비 */
+:root {
+  --muted: #7a625c;      /* 크림 바탕에서 대비 약 5:1 */
+  --forest: #c93c66;     /* 작은 분홍 글씨도 또렷하게 */
+}
+.footer { color: #6e5550; }
+.footer .notice, .footer .link-btn, .biz-info { color: #6e5550; }
+.bento-main p, .cta-band p, .quiz-band p, .seller-top > div { color: #6f5650; }
+.pet-note { color: #6a5550; }
+.fee-why { color: #5f4c47; }
+.tag-pend { background: #ece4ff; color: #5b3fb8; }
+.soldout-cover.pend { background: rgba(167, 139, 250, .55); }
+.story-review { padding: 14px 0; }
+.story-photo { max-width: 220px; border-radius: 16px; margin-top: 8px; display: block; }
+.has-fab main.container { padding-bottom: 120px; }
+@media (max-width: 640px) {
+  .quiz-fab { padding: 0; width: 54px; height: 54px; justify-content: center; border-radius: 50%; right: 12px; bottom: 12px; }
+  .quiz-fab .fab-text { display: none; }
+  .quiz-fab .fab-ico { font-size: 24px; }
+  .has-fab main.container { padding-bottom: 96px; }
+}

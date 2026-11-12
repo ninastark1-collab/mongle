@@ -34,7 +34,7 @@
         <a href="product.html?id=${p.id}">${thumb(p, 'sm')}</a>
         <div><a href="product.html?id=${p.id}"><strong>${esc(p.name.split(' · ')[0])}</strong></a>
           <div class="muted" style="font-size:12px">${p.pet ? esc(p.pet.age) + ' · ' : ''}분양비 ${feeText(p.price)}</div>
-          ${p.soldOut ? '<span class="tag tag-home">💛 가족을 찾았어요</span>' : `<a class="btn btn-sm btn-primary" href="product.html?id=${p.id}">💌 입양 신청하기</a>`}</div>
+          ${adoptState(p) === 'pending' ? '<span class="tag tag-pend">💬 입양 상담 중</span>' : p.soldOut ? '<span class="tag tag-home">💛 가족을 찾았어요</span>' : `<a class="btn btn-sm btn-primary" href="product.html?id=${p.id}">💌 입양 신청하기</a>`}</div>
       </div>`).join('')}</div></section>`;
   }
   // 함께 준비하면 좋은 용품

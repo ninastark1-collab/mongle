@@ -99,7 +99,7 @@
     <section class="section">
       <div class="section-head"><div><div class="eyebrow">Happy together</div><h2>새 가족을 만났어요 💛</h2></div></div>
       <div class="story-grid">${stories.map(st => `<a class="story" href="product.html?id=${st.p.id}">
-        <div class="story-img">${thumb({ ...st.p, soldOut: false })}</div>
+        <div class="story-img">${safeImage(st.photo) ? `<div class="thumb"><img src="${safeImage(st.photo)}" alt="우리 아이 근황 사진"></div>` : thumb({ ...st.p, soldOut: false })}</div>
         <div class="story-body"><p>“${esc(st.text)}”</p><span>— ${esc(maskName(st.name))} 님</span></div></a>`).join('')}</div>
     </section>` : ''}
 

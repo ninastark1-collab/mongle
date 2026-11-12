@@ -59,7 +59,7 @@ const Catalog = {
       ...BASE_PRODUCTS.map(p => ({ ...p, ...(ov[p.id] || {}) })),
       ...this.custom().filter(p => !p.deleted),
     ];
-    this._cache = list.map(p => {
+    this._cache = list.map(p => this._fillPet(p)).map(p => {
       const mine = reviews.filter(r => r.productId === p.id);
       const baseCount = p.reviews || 0;
       const count = baseCount + mine.length;
@@ -73,6 +73,22 @@ const Catalog = {
       };
     });
     return this._cache;
+  },
+  _fillPet(p) {
+    if (!p.live || !p.pet || p.pet.origin || typeof petDetail !== 'function') return p;
+    const d = petDetail(p.id, p.category, p.pet.age || '', p.pet.health || '', p.pet.lifespan || '');
+    return {
+      ...p,
+      options: [],
+      pet: {
+        ...d, ...p.pet,
+        sex: p.pet.sex || '성별 확인 중',
+        traits: p.pet.traits || TRAIT_DEFAULT[p.category] || [],
+        origin: { place: `분양자 '${p.seller}'의 집에서 태어났어요`, parents: p.pet.parents || '부모 정보는 만남 때 안내해 드려요', visit: true },
+        birth: p.pet.birth || d.birth,
+      },
+      fee: p.fee || { type: '분양비', lo: 0, hi: 0, pos: 0.5, noRange: true, why: '분양자가 정한 분양비예요. 건강검진·접종 등 지금까지의 돌봄 비용이 포함돼 있어요.', includes: FEE_INCLUDES[p.category] || [] },
+    };
   },
   // 진열 중인 상품 (판매중지 제외)
   visible() { return this.all().filter(p => p.status !== 'hidden'); },
@@ -525,7 +541,7 @@ const Restock = {
     const p = Catalog.get(id);
     const list = this.all();
     list.filter(r => r.productId === Number(id)).forEach(r =>
-      Notify.push(r.email, `🔔 재입고! ${josa(p ? p.name.split(' · ')[0] : '상품', '을', '를')} 다시 만날 수 있어요.`, 'product.html?id=' + id));
+      Notify.push(r.email, p && p.live ? `💛 ${josa(p.name.split(' · ')[0], '이', '가')} 다시 가족을 기다리고 있어요. 지금 입양 신청할 수 있어요.` : `🔔 재입고! ${josa(p ? p.name.split(' · ')[0] : '준비물', '을', '를')} 다시 만날 수 있어요.`, 'product.html?id=' + id));
     Store.set('restock', list.filter(r => r.productId !== Number(id)));
   },
 };
