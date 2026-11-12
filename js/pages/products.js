@@ -94,6 +94,7 @@
       </details>
       <section>
         <h1 class="page-title" id="title"></h1>
+        <div id="supplyPerks"></div>
         <div class="toolbar">
           <div class="muted" id="count"></div>
           <div class="sort-tabs">${SORTS.map(([k, v]) => `<button data-sort="${k}">${v}</button>`).join('')}</div>
@@ -139,8 +140,25 @@
     }));
   }
 
+  function paintPerks() {
+    const box = $('#supplyPerks');
+    if (!isSupplyView()) { box.innerHTML = ''; return; }
+    const u = Auth.current();
+    box.innerHTML = `<div class="perk-strip"><span>🎟️ 준비물 쿠폰</span>${Object.entries(COUPONS).map(([code, c]) => {
+      const owned = u && CouponBox.has(code);
+      return `<button type="button" class="perk" data-perk="${code}" ${owned ? 'disabled' : ''}><b>${c.short}</b> ${esc(c.label.replace(/ \(.*\)/, ''))}${owned ? ' ✓' : ''}</button>`;
+    }).join('')}<span class="muted" style="font-size:12px">${won(FREE_SHIPPING_MIN)} 이상 무료배송</span></div>`;
+    $$('[data-perk]', box).forEach(b => b.addEventListener('click', () => {
+      const r = CouponBox.give(b.dataset.perk);
+      if (r === 'login') { toast('로그인하고 쿠폰을 받아보세요.', loginUrl(), '로그인'); return; }
+      toast(r === 'ok' ? '쿠폰을 받았어요! 준비물 결제 때 쓸 수 있어요.' : '이미 받은 쿠폰이에요.', 'mypage.html?tab=coupons', '쿠폰함');
+      paintPerks();
+    }));
+  }
+
   function render() {
     renderSide();
+    paintPerks();
     const list = filtered();
     $('#title').innerHTML = title();
     $('#count').textContent = `총 ${list.length}${list.every(p => p.live) && list.length ? '마리' : '개'}`;

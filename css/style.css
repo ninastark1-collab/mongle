@@ -954,3 +954,16 @@ h1, h2, h3, .logo, .section-head h2, h1.page-title, .bento h3, .cta-band h3, .ti
 .fee-why { font-size: 13px; color: #6f5c57; margin: 6px 0 8px; line-height: 1.55; }
 .fee-inc { display: flex; flex-wrap: wrap; gap: 6px; }
 .fee-inc span { background: #f3faf6; color: #2f7a57; border-radius: 999px; padding: 4px 10px; font-size: 12px; font-weight: 600; }
+
+/* v16: 참고용 사진 안내 */
+.photo-note { font-size: 12px; color: var(--muted); margin: 8px 4px 0; text-align: center; }
+
+/* v16: 홈 정리 · 준비물 혜택 · 정책 */
+.bento-prep { background: linear-gradient(135deg, #fff3c4, #ffe3d2); color: var(--text); }
+.perk-strip { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: #fff8f0; border: 1.5px dashed #ffd9b8; border-radius: 18px; padding: 10px 14px; margin: -6px 0 14px; font-size: 13px; font-weight: 600; }
+.perk { border: 1.5px solid var(--line); background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 12px; }
+.perk b { color: var(--hot); margin-right: 2px; }
+.perk:disabled { opacity: .6; cursor: default; }
+.biz-info { margin-top: 18px; font-size: 12px; color: #a0857f; line-height: 1.6; }
+.footer-bottom a { text-decoration: underline; text-underline-offset: 2px; }
+.policy p { line-height: 1.7; }

@@ -144,6 +144,8 @@
         <div id="sum"></div>
         <label class="check" style="font-size:13px;margin-top:12px"><input type="checkbox" id="agree"> ${liveOnly ? '신청 내용이 사실임을 확인합니다 (필수)' : '준비물 내용을 확인했고 결제에 동의해요 (필수)'}</label>
         ${liveOnly ? '<p class="muted" style="font-size:12px;margin:8px 0 0">💡 지금은 결제하지 않아요. 만남 후 분양자가 승인하면 마이페이지에서 분양비를 결제해요.</p>' : ''}
+        <label class="check" style="font-size:13px;margin-top:8px"><input type="checkbox" id="privacyAgree"> [필수] 개인정보 수집·이용에 동의해요 <a href="terms.html?tab=privacy" target="_blank" class="link-btn">내용 보기</a></label>
+        <p class="muted" style="font-size:12px;margin:4px 0 0">${hasLive ? '이름·연락처·주소와 신청서 답변(가족·주거·반려 경험 등)을 입양 검토와 분양자 연락에만 써요.' : '이름·연락처·주소를 준비물 배송에만 써요.'}</p>
         <div class="error-text" id="agreeErr"></div>
         <button class="btn btn-primary btn-lg btn-block" id="payBtn" style="margin-top:12px"></button>
       </aside>
@@ -275,6 +277,10 @@
     if (hasLive && !$('#liveAgree').checked) {
       $('#liveErr').textContent = '입양 약속에 동의해 주세요.';
       $('#liveErr').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    if (!$('#privacyAgree').checked) {
+      $('#agreeErr').textContent = '개인정보 수집·이용에 동의해 주세요.';
       return;
     }
     if (!$('#agree').checked) {

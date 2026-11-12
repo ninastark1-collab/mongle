@@ -77,7 +77,7 @@ function petCard(p) {
       <div class="thumb-wrap">${thumb(p)}</div>
       <div class="info">
         <div class="name">${esc(p.name)}</div>
-        ${p.pet ? `<div class="pet-meta">${esc(p.pet.age)} · ${esc(p.pet.care)}</div>` : ''}
+        ${p.pet ? `<div class="pet-meta">${esc(p.pet.age)}${p.pet.sex && !/확인|검사|여러/.test(p.pet.sex) ? ' · ' + esc(p.pet.sex) : ''} · ${esc(p.pet.care)}</div>` : ''}
         ${p.pet && p.pet.note ? `<div class="pet-note">“${esc(p.pet.note)}”</div>` : ''}
         <div class="adopt-fee"><span>${p.fee && p.fee.type === '책임비' ? '책임비' : '분양비'}</span> ${feeText(p.price)}</div>
         <div class="tags">
@@ -233,7 +233,6 @@ function renderHeader() {
       <a href="#" class="quiz-nav" data-quiz>🧩 나와 맞는 친구</a>
       <a href="products.html" class="${page === 'products.html' && !cat && !q && sort !== 'discount' ? 'active' : ''}">전체</a>
       ${CATEGORIES.map(c => `<a href="products.html?cat=${c.id}" class="${cat === c.id ? 'active' : ''}">${c.name}</a>`).join('')}
-      <a href="products.html?sort=discount" class="hot ${sort === 'discount' && !cat && !q ? 'active' : ''}">용품 SALE</a>
       <a href="products.html?sort=new" class="${sort === 'new' && !cat && !q ? 'active' : ''}">신상</a>
     </div></nav>
   </header>`;
@@ -358,7 +357,8 @@ function renderFooter() {
       <div><strong>분양자·브리더</strong><a href="seller.html">책임 분양 함께하기 →</a><br>용품 ${won(FREE_SHIPPING_MIN)} 이상 무료배송</div>
     </div>
     <div class="notice">⚠️ 학습용 데모 사이트입니다. 실제 결제·배송이 이루어지지 않으며, 회원·입양·준비물 정보는 이 브라우저(localStorage)에만 저장됩니다. 실제 분양이 아니며, 사진은 Unsplash 무료 라이선스 이미지입니다. 실제 사용하는 비밀번호를 입력하지 마세요.</div>
-    <div class="footer-bottom"><span>© 2026 mongle. All rights reserved.</span><button class="link-btn" id="toTop" type="button">맨 위로 ↑</button></div>
+    <div class="biz-info">몽글 (데모) · 대표 몽글이 · 사업자등록번호 000-00-00000 · 통신판매업 신고 제2026-데모-0000호 · 동물판매업 등록번호 제0000-000호 (데모 값)</div>
+    <div class="footer-bottom"><span>© 2026 mongle. All rights reserved. · <a href="terms.html">이용약관</a> · <a href="terms.html?tab=privacy"><b>개인정보처리방침</b></a> · <a href="terms.html?tab=contract">분양 계약 안내</a></span><button class="link-btn" id="toTop" type="button">맨 위로 ↑</button></div>
     <div class="wordmark" aria-hidden="true">mongle<i>♥</i></div>
   </div></footer>`;
   $('#toTop').addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));

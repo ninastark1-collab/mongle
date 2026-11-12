@@ -29,7 +29,7 @@
     '가족들도 좋아해요. 또 살게요!', '무난하게 좋아요. 할인할 때 사면 이득!',
   ];
   const sampleNames = ['김*진', '이*수', '박*영', '최*민', '정*아', '한*결', '윤*호'];
-  const sampleReviews = p.sellerEmail ? [] : Array.from({ length: 5 }, (_, i) => {
+  const sampleReviews = p.sellerEmail || p.live ? [] : Array.from({ length: 5 }, (_, i) => {
     const d = new Date('2026-10-30'); d.setDate(d.getDate() - (i * 4 + (p.id % 5)));
     return { name: sampleNames[(p.id + i) % 7], score: i === 3 ? 4 : 5, text: sampleTexts[(p.id * 7 + i * 3) % 7], date: d.toISOString(), option: p.options[0] || '' };
   });
@@ -48,7 +48,7 @@
     <div class="breadcrumb"><a href="index.html">홈</a> › <a href="products.html?cat=${cat.id}">${cat.name}</a></div>
     ${hidden ? '<div class="free-hint">⚠️ 지금은 잠시 쉬고 있어요.</div>' : ''}
     <div class="detail">
-      <div>${thumb(p, 'lg')}</div>
+      <div>${thumb(p, 'lg')}${p.live ? '<p class="photo-note">📷 참고용 사진이에요 (데모). 실제 분양에서는 이 아이의 실물 사진과 영상을 보여드려요.</p>' : ''}</div>
       <div>
         <div class="tags">
           ${p.live ? '<span class="tag tag-fast">🩺 건강보증 15일</span><span class="tag tag-free">직접 인계</span>' : ''}
@@ -58,7 +58,7 @@
         </div>
         <h1>${esc(p.name)}</h1>
         ${p.live
-          ? `<div class="rating"><a href="#" id="toReviews">💌 입양 가족 후기 ${p.reviewCount.toLocaleString()}개</a></div>
+          ? `${p.reviewCount ? `<div class="rating"><a href="#" id="toReviews">💌 입양 가족 후기 ${p.reviewCount.toLocaleString()}개</a></div>` : ''}
              ${p.pet && p.pet.note ? `<div class="breeder-msg"><b>분양자 한마디</b>${esc(p.pet.note)}</div>` : ''}`
           : `<div class="rating">${p.reviewCount ? `${stars(p.avgRating)} <strong>${p.avgRating}</strong> · <a href="#" id="toReviews">리뷰 ${p.reviewCount.toLocaleString()}개</a>` : '아직 리뷰가 없어요'}${p.sold ? ` · ${p.sold.toLocaleString()}개 담겼어요` : ''}</div>
         <div style="margin-top:14px">${priceBlock(p)}</div>
@@ -66,6 +66,7 @@
 
         ${p.live && p.pet ? `<div class="pet-info">
           <div><b>나이</b>${esc(p.pet.age)}</div>
+          <div><b>성별</b>${esc(p.pet.sex || '-')}</div>
           <div><b>건강</b>${esc(p.pet.health)}</div>
           <div><b>평균 수명</b>${esc(p.pet.lifespan)}</div>
           <div><b>다 자란 크기</b>${esc(p.pet.size)}</div>
@@ -180,7 +181,7 @@
           <div>${dist.map((d, i) => `<div class="bar"><span>${5 - i}점</span><div class="track"><div class="fill" style="width:${d * 100}%"></div></div><span class="muted">${Math.round(d * 100)}%</span></div>`).join('')}</div>
         </div>` : ''}
         <p class="muted" style="font-size:13px">${p.live ? '입양 후기는 이 아이들의 형제·자매를 먼저 입양한 가족들이 남겨주신 이야기예요. 입양을 마친 가족은 마이페이지에서 후기를 남길 수 있어요.' : '리뷰는 준비물을 받아본 가족만 마이페이지 &gt; 우리 아이 소식에서 남길 수 있어요.'}</p>
-        ${allReviews.length ? allReviews.map(r => `<div class="review"><div>${stars(r.score)} <strong>${esc(r.real ? maskName(r.name) : r.name)}</strong>${r.real ? ' <span class="tag tag-free">받아본 가족</span>' : ''}</div><div class="meta">${fmtDate(r.date)}${r.option ? ' · 옵션: ' + esc(r.option) : ''}</div><p style="margin:6px 0 0;white-space:pre-line">${esc(r.text)}</p></div>`).join('') : '<div class="empty"><div class="ico">✍️</div><p>첫 번째 리뷰의 주인공이 되어 주세요!</p></div>'}
+        ${allReviews.length ? allReviews.map(r => `<div class="review"><div>${stars(r.score)} <strong>${esc(r.real ? maskName(r.name) : r.name)}</strong>${r.real ? ' <span class="tag tag-free">받아본 가족</span>' : ''}</div><div class="meta">${fmtDate(r.date)}${r.option ? ' · 옵션: ' + esc(r.option) : ''}</div><p style="margin:6px 0 0;white-space:pre-line">${esc(r.text)}</p></div>`).join('') : (p.live ? '<div class="empty"><div class="ico">💌</div><p>아직 입양 후기가 없어요.<br>이 아이와 가족이 되면 첫 이야기를 들려주세요.</p></div>' : '<div class="empty"><div class="ico">✍️</div><p>첫 번째 리뷰의 주인공이 되어 주세요!</p></div>')}
       </div>
     </div>
     <div class="tab-panel hidden" id="tab-qna"><div class="card" id="qnaBox"></div></div>

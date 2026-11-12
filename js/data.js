@@ -547,19 +547,30 @@ function feeInfo(id, category, age, price) {
   return { type, lo, hi, pos: Math.max(0, Math.min(1, pos)), why, includes: FEE_INCLUDES[category] || [] };
 }
 
+// 성별: 한 아이 = 한 페이지라서 고르는 옵션이 아니라 정보로 보여줘요
+function sexOf(options, category, name) {
+  const o = (options && options[0]) || '';
+  if (/남아/.test(o)) return '남아';
+  if (/여아/.test(o)) return '여아';
+  if (/수컷/.test(o)) return '수컷';
+  if (/암컷/.test(o)) return '암컷';
+  if (/마리|쌍|세트|커플|남매|키트|키우기/.test(name)) return '여러 마리 함께';
+  if (category === 'bird') return 'DNA 성별 검사 전';
+  return '성별 확인 중';
+}
 const SHIP_EMOJI = '🐾';
 const BASE_PRODUCTS = [
   ...(PETS.forEach(r => { FEE_NAMES[r[0]] = r[2]; }), []),
   ...PETS.map(([id, category, name, price0, photo, emoji, stock, age, health, lifespan, care, size, options], i) => ({ id, category, name, price: FEE[id] ? FEE[id][0] : price0, photo, emoji, stock, age, health, lifespan, care, size, options, i }))
   .map(({ id, category, name, price, photo, emoji, stock, age, health, lifespan, care, size, options, i }) => ({
-    id, category, name, price, originalPrice: price, emoji, options, fee: feeInfo(id, category, age, price),
+    id, category, name, price, originalPrice: price, emoji, options: [], fee: feeInfo(id, category, age, price),
     image: PHOTO(photo), live: true,
-    pet: { age, health, lifespan, care: CARE[care], size, note: PET_NOTES[id] || '', traits: TRAIT_OVERRIDE[id] || TRAIT_DEFAULT[category] || [], ...petDetail(id, category, age, health, lifespan) },
-    rating: 4.7 + (id % 3) / 10, reviews: 20 + (id * 37) % 260,
+    pet: { age, sex: sexOf(options, category, name), health, lifespan, care: CARE[care], size, note: PET_NOTES[id] || '', traits: TRAIT_OVERRIDE[id] || TRAIT_DEFAULT[category] || [], ...petDetail(id, category, age, health, lifespan) },
+    rating: 0, reviews: 0, // 실제 입양 가족이 남긴 후기만 보여줘요
     fast: false, freeShip: true,
     gradient: GRADIENTS[id % GRADIENTS.length],
     seller: '몽글 분양 하우스', sellerEmail: null,
-    stock, createdAt: id >= 60 ? '2026-11-13T00:00:00.000Z' : id >= 43 ? '2026-11-12T00:00:00.000Z' : new Date(Date.UTC(2026, 10, 1 + (i % 11))).toISOString(),
+    stock: Math.min(stock, 1), createdAt: id >= 60 ? '2026-11-13T00:00:00.000Z' : id >= 43 ? '2026-11-12T00:00:00.000Z' : new Date(Date.UTC(2026, 10, 1 + (i % 11))).toISOString(),
     isNew: id >= 43 && !/살/.test(age), // 이번 주 새로 온 아기
     description: `${name.split(' · ')[0]} 친구가 평생 함께할 가족을 기다리고 있어요.\n\n· 나이: ${age}\n· 건강: ${health}\n· 평균 수명: ${lifespan}\n· 다 자란 크기: ${size}\n\n몽글은 아이를 '판매'하지 않고, 정성껏 키워주실 가족을 찾아 '분양'해요. 입양 신청서를 꼼꼼히 읽고, 아이와 잘 맞는 가족이라고 판단될 때 분양을 결정해요. 분양비는 그동안의 건강검진·접종·돌봄 비용에 쓰여요.\n\n생명은 택배로 보내지 않고 직접 만나 인계하며, 분양 계약서와 건강 기록, 먹던 사료를 함께 보내드려요.`,
   })),
