@@ -566,7 +566,7 @@ const BASE_PRODUCTS = [
     gradient: GRADIENTS[id % GRADIENTS.length],
     seller: '몽글 직영', sellerEmail: null,
     stock: id === 40 ? 3 : 100, createdAt: '2026-10-01T00:00:00.000Z',
-    description: `${name}은(는) 몽글 에디터가 직접 써보고 고른 용품이에요. 반려동물이 안전하게 쓸 수 있는 소재인지 확인했어요. 받아보신 후 7일 이내 단순 변심 반품이 가능합니다.`,
+    description: `${name}은(는) 몽글 에디터가 직접 써보고 고른 용품이에요. 반려동물이 안전하게 쓸 수 있는 소재인지 확인했어요. 받아보신 후 7일 안에 단순 변심 교환·환불이 가능해요.`,
   })),
 ].map(p => ({ ...p, discount: Math.round((1 - p.price / p.originalPrice) * 100) }));
 

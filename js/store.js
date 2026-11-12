@@ -207,9 +207,9 @@ const QnA = {
 // ---------- 주문 ----------
 const STATUS_FLOW = ['결제완료', '배송준비중', '배송중', '배송완료', '구매확정'];
 const CANCELLABLE = ['결제완료', '배송준비중'];
-const RETURN_REASONS = ['단순 변심', '상품 불량/파손', '오배송', '상품 정보와 다름', '기타'];
-// 반려동물은 단순 변심 반품 불가. 소비자분쟁해결기준: 15일 이내 폐사·질병 시 교환/환불
-const LIVE_RETURN_REASONS = ['15일 이내 질병 발생', '15일 이내 폐사', '분양 정보와 다름'];
+const RETURN_REASONS = ['단순 변심', '준비물 불량·파손', '다른 준비물이 왔어요', '준비물 정보와 달라요', '기타'];
+// 반려동물은 마음이 바뀌어도 돌려보내지 않아요. 소비자분쟁해결기준: 15일 이내 질병·사망 시 치료 지원 또는 교환·환불
+const LIVE_RETURN_REASONS = ['15일 안에 아파요', '15일 안에 무지개다리를 건넜어요', '분양 정보와 달라요'];
 const RETURN_FEE = 6000; // 단순 변심 반품 왕복 배송비 (고객 부담)
 
 const Orders = {
@@ -334,7 +334,7 @@ const Orders = {
     it.returnDetail = String(detail || '').slice(0, 300);
     it.returnAt = new Date().toISOString();
     this.saveAll(all);
-    if (it.sellerEmail) Notify.push(it.sellerEmail, `↩️ 반품 요청이 들어왔어요: ${it.name} (${reason})`, 'seller.html?tab=orders');
+    if (it.sellerEmail) Notify.push(it.sellerEmail, (it.live ? `🩺 건강보증 신청이 들어왔어요: ${it.name.split(' · ')[0]} (${reason})` : `💌 교환·환불 요청이 들어왔어요: ${it.name} (${reason})`), 'seller.html?tab=orders');
     return true;
   },
   _applyReturn(o, it) {
@@ -344,7 +344,7 @@ const Orders = {
     it.returnDoneAt = new Date().toISOString();
     Catalog.adjustStock(it.id, it.qty);
     if (r.points) Auth.addPoints(o.userEmail, r.points);
-    Notify.push(o.userEmail, `💸 반품이 완료되어 ${won(r.cash)} 환불${r.points ? ` · 적립금 ${r.points.toLocaleString()}P 반환` : ''}되었어요.`, 'order-complete.html?no=' + encodeURIComponent(o.no));
+    Notify.push(o.userEmail, `${it.live ? '🩺 건강보증 처리가 끝나 ' : '💸 환불이 완료되어 '}${won(r.cash)} 환불${r.points ? ` · 적립금 ${r.points.toLocaleString()}P 반환` : ''}되었어요.`, 'order-complete.html?no=' + encodeURIComponent(o.no));
   },
   // ----- 입양: 승인 후 분양비 결제 -----
   canPayAdoption(o) {

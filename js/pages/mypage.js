@@ -15,7 +15,7 @@
       return s === f;
     };
     const orders = all.filter(o => match(o, orderFilter));
-    const head = `<div class="sort-tabs" style="margin-bottom:14px">${filters.map(f => `<button data-filter="${f}" class="${f === orderFilter ? 'active' : ''}">${({ 배송중: '진행 중', 배송완료: '도착·인계', 구매확정: '완료' })[f] || f} (${all.filter(o => match(o, f)).length})</button>`).join('')}</div>`;
+    const head = `<div class="sort-tabs" style="margin-bottom:14px">${filters.map(f => `<button data-filter="${f}" class="${f === orderFilter ? 'active' : ''}">${({ 배송중: '진행 중', 배송완료: '도착·인계', 구매확정: '완료', '취소/반품': '취소·환불·보증' })[f] || f} (${all.filter(o => match(o, f)).length})</button>`).join('')}</div>`;
     if (!all.length) return `<div class="empty"><div class="ico">📦</div><p>아직 소식이 없어요. 새 가족을 만나러 가볼까요?</p><a class="btn btn-primary" href="index.html">친구들 만나러 가기</a></div>`;
     if (!orders.length) return head + `<div class="empty"><p>해당하는 소식이 없어요.</p></div>`;
     return head + orders.map(o => {
@@ -34,11 +34,11 @@
               ${i.declined ? `<div class="decline-msg">🌷 ${esc(i.declineMsg || '이번에는 함께하지 못하게 되었어요. 다른 친구와의 좋은 인연을 응원할게요.')}</div>` : ''}
               ${i.rehome ? `<div class="muted" style="font-size:12px">🤝 재입양 상담 접수됨 (${fmtDate(i.rehome.at)}) · 몽글 상담 선생님이 연락드려요</div>` : ''}
               ${i.tracking && i.status !== '주문취소' ? `<div class="muted" style="font-size:12px">🚚 송장 ${esc(i.tracking)}</div>` : ''}
-              ${i.status === '반품요청' ? `<div class="muted" style="font-size:12px">↩️ 반품 사유: ${esc(i.returnReason)} · ${i.sellerEmail ? '판매자 확인 중' : '곧 자동 승인돼요 (데모)'}</div>` : ''}
-              ${i.refund ? `<div class="muted" style="font-size:12px">💸 환불 ${won(i.refund.cash)}${i.refund.points ? ` + ${i.refund.points.toLocaleString()}P` : ''}${i.refund.fee ? ` (반품배송비 ${won(i.refund.fee)} 차감)` : ''}</div>` : ''}</div>
+              ${i.status === '반품요청' ? `<div class="muted" style="font-size:12px">${i.live ? '🩺 건강보증' : '💌 교환·환불'} 사유: ${esc(i.returnReason)} · ${i.sellerEmail ? '판매자 확인 중' : '곧 자동 승인돼요 (데모)'}</div>` : ''}
+              ${i.refund ? `<div class="muted" style="font-size:12px">💸 환불 ${won(i.refund.cash)}${i.refund.points ? ` + ${i.refund.points.toLocaleString()}P` : ''}${i.refund.fee ? ` (왕복 배송비 ${won(i.refund.fee)} 차감)` : ''}</div>` : ''}</div>
             <div style="text-align:right"><span class="status s-${i.status}">${statusLabel(i.status, i.live)}</span>
               <div class="item-actions">
-                ${i.status === '배송완료' ? `<button class="btn btn-sm btn-primary" data-confirm="${esc(o.no)}" data-idx="${idx}" data-live="${i.live ? 1 : ''}">${i.live ? '입양 완료' : '잘 받았어요'}</button><button class="btn btn-sm" data-return="${esc(o.no)}" data-idx="${idx}">${i.live ? '건강보증 신청' : '반품신청'}</button>` : ''}
+                ${i.status === '배송완료' ? `<button class="btn btn-sm btn-primary" data-confirm="${esc(o.no)}" data-idx="${idx}" data-live="${i.live ? 1 : ''}">${i.live ? '입양 완료' : '잘 받았어요'}</button><button class="btn btn-sm" data-return="${esc(o.no)}" data-idx="${idx}">${i.live ? '건강보증 신청' : '교환·환불'}</button>` : ''}
                 ${['배송완료', '구매확정'].includes(i.status) && !i.reviewed && p ? `<button class="btn btn-sm btn-outline" data-review="${esc(o.no)}" data-idx="${idx}">${i.live ? '입양 후기' : '리뷰쓰기'}</button>` : ''}
                 ${i.reviewed ? '<span class="muted" style="font-size:12px">리뷰 작성완료</span>' : ''}
                 ${i.live && ['배송완료', '구매확정'].includes(i.status) && !i.rehome ? `<button class="btn btn-sm" data-rehome="${esc(o.no)}" data-idx="${idx}">함께하기 어려워졌어요</button>` : ''}
@@ -216,7 +216,7 @@
       title: b.dataset.live ? '입양 완료' : '잘 받았어요',
       body: b.dataset.live
         ? '<p>새 가족과 잘 지내고 있나요? 💛<br><span class="muted" style="font-size:13px">입양 완료 후에는 건강보증 신청이 어려워요. 15일 동안 건강하게 지냈는지 확인 후 눌러주세요.</span></p>'
-        : '<p>준비물을 잘 받으셨나요?<br><span class="muted" style="font-size:13px">확인 후에는 교환·반품 신청이 어려워요.</span></p>',
+        : '<p>준비물을 잘 받으셨나요?<br><span class="muted" style="font-size:13px">확인 후에는 교환·환불 신청이 어려워요.</span></p>',
       okText: b.dataset.live ? '입양 완료' : '잘 받았어요',
       onOk: () => {
         const pts = Orders.confirm(b.dataset.confirm, Number(b.dataset.idx));
@@ -307,17 +307,17 @@
       return `예상 환불액 <b>${won(r.cash)}</b>${r.points ? ` + 적립금 ${r.points.toLocaleString()}P` : ''}${r.fee ? `<br><span class="muted">단순 변심은 왕복 배송비 ${won(r.fee)}이 차감돼요.</span>` : ''}`;
     };
     const w = modal({
-      title: it.live ? '건강보증 신청' : '반품 신청',
-      body: `<p style="margin-top:0"><b>${esc(it.name)}</b> · ${it.qty}개</p>
-        <div class="field"><label for="rtReason">반품 사유</label><select class="select" id="rtReason">${(it.live ? LIVE_RETURN_REASONS : RETURN_REASONS).map(r => `<option>${r}</option>`).join('')}</select></div>
+      title: it.live ? '🩺 건강보증 신청' : '교환·환불 신청',
+      body: `<p style="margin-top:0"><b>${esc(it.name)}</b> · ${it.qty}${it.live ? "마리" : "개"}</p>
+        <div class="field"><label for="rtReason">${it.live ? '어떤 일이 있었나요?' : '사유'}</label><select class="select" id="rtReason">${(it.live ? LIVE_RETURN_REASONS : RETURN_REASONS).map(r => `<option>${r}</option>`).join('')}</select></div>
         <textarea class="input" id="rtText" rows="3" maxlength="300" placeholder="자세한 내용을 적어주세요 (선택)"></textarea>
         <div class="free-hint" id="rtPreview">${preview((it.live ? LIVE_RETURN_REASONS : RETURN_REASONS)[0])}</div>
-        ${it.live ? '<p class="muted" style="font-size:12px;margin:0 0 6px">반려동물은 단순 변심 반품이 안 돼요. 인계 후 15일 이내 질병·폐사, 분양 정보와 다른 경우에만 신청할 수 있고, 수의사 진단서가 필요해요. (데모)</p>' : ''}
-        <p class="muted" style="font-size:12px;margin:0">수거 기사님이 1~2일 안에 방문해요. 판매자가 확인하면 결제 수단으로 환불됩니다. (데모)</p>`,
-      okText: '반품 신청',
+        ${it.live ? '<p class="muted" style="font-size:12px;margin:0 0 6px">많이 놀라셨죠. 인계 후 15일 안에 아프거나, 무지개다리를 건넜거나, 분양 정보와 다를 때 신청할 수 있어요. 수의사 진단서를 함께 보내주시면 분양자가 끝까지 책임지고 도와드려요. (데모)</p>' : ''}
+        ${it.live ? '<p class="muted" style="font-size:12px;margin:0">분양자가 1일 안에 연락드려 아이 상태를 함께 살펴요. 치료 지원이 먼저이고, 필요하면 환불해 드려요. (데모)</p>' : '<p class="muted" style="font-size:12px;margin:0">택배 기사님이 1~2일 안에 준비물을 가지러 가요. 확인 후 결제 수단으로 환불돼요. (데모)</p>'}`,
+      okText: it.live ? '건강보증 신청하기' : '교환·환불 신청하기',
       onOk: wrap => {
-        if (Orders.requestReturn(no, idx, $('#rtReason', wrap).value, $('#rtText', wrap).value.trim())) toast('반품 신청이 접수되었어요.');
-        else toast('반품 신청할 수 없는 상태예요.');
+        if (Orders.requestReturn(no, idx, $('#rtReason', wrap).value, $('#rtText', wrap).value.trim())) toast(it.live ? '건강보증 신청이 접수되었어요. 곧 연락드릴게요.' : '교환·환불 신청이 접수되었어요.');
+        else toast('지금은 신청할 수 없는 상태예요.');
         render();
       },
     });

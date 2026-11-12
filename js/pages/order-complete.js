@@ -22,7 +22,7 @@
       <p class="muted">${fmtDate(o.date)} ${adopt ? "신청 · 신청번호" : "접수 · 접수번호"} <strong>${esc(o.no)}</strong></p>
       <div class="card">
         ${step < 0
-          ? `<div class="center"><span class="status s-${status}">${statusLabel(status, adopt)}</span><p class="muted">${status === '주문취소' ? '취소되었어요. 사용한 적립금과 쿠폰은 반환되었어요.' : status === '반품요청' ? '반품 신청이 접수되었어요. 판매자 확인 후 환불돼요.' : '반품이 완료되어 환불되었어요.'}</p></div>`
+          ? `<div class="center"><span class="status s-${status}">${statusLabel(status, adopt)}</span><p class="muted">${status === '주문취소' ? '취소되었어요. 사용한 적립금과 쿠폰은 반환되었어요.' : status === '반품요청' ? (adopt ? '건강보증 신청이 접수되었어요. 분양자가 아이 상태를 함께 살펴볼게요.' : '교환·환불 신청이 접수되었어요. 확인 후 환불돼요.') : (adopt ? '건강보증 처리가 끝났어요. 마음 아픈 일이 있었다면 진심으로 위로드려요.' : '환불이 완료되었어요.')}</p></div>`
           : `<div class="timeline">${STATUS_FLOW.map((s, i) => `<div class="step ${i <= step ? 'done' : ''}"><div class="dot">${i <= step ? '✓' : i + 1}</div>${statusLabel(s, adopt)}</div>`).join('')}</div>`}
       </div>
       <div class="card">
@@ -32,8 +32,8 @@
           return `<div class="co-item">${p ? `<a href="product.html?id=${p.id}">${thumb(p, 'sm')}</a>` : '<div class="thumb sm" style="background:var(--bg)"><span class="emoji">📦</span></div>'}
             <div><div>${esc(i.name)}</div><div class="muted" style="font-size:13px">${i.option ? esc(i.option) + ' · ' : ''}${i.qty}개 · ${esc(i.seller || '몽글 직영')}</div>
             ${i.tracking ? `<div class="muted" style="font-size:12px">송장: ${esc(i.tracking)}</div>` : ''}
-            ${i.returnReason ? `<div class="muted" style="font-size:12px">반품 사유: ${esc(i.returnReason)}</div>` : ''}
-            ${i.refund ? `<div class="muted" style="font-size:12px">환불 ${won(i.refund.cash)}${i.refund.points ? ` + ${i.refund.points.toLocaleString()}P` : ''}${i.refund.fee ? ` (반품배송비 ${won(i.refund.fee)} 차감)` : ''}</div>` : ''}</div>
+            ${i.returnReason ? `<div class="muted" style="font-size:12px">${i.live ? '건강보증' : '교환·환불'} 사유: ${esc(i.returnReason)}</div>` : ''}
+            ${i.refund ? `<div class="muted" style="font-size:12px">환불 ${won(i.refund.cash)}${i.refund.points ? ` + ${i.refund.points.toLocaleString()}P` : ''}${i.refund.fee ? ` (왕복 배송비 ${won(i.refund.fee)} 차감)` : ''}</div>` : ''}</div>
             <div style="text-align:right">${won(i.price * i.qty)}<br><span class="status s-${i.status}">${statusLabel(i.status, i.live)}</span></div></div>`;
         }).join('')}
       </div>

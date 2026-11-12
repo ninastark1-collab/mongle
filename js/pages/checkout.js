@@ -98,7 +98,7 @@
               <li>이사·결혼·출산 같은 변화가 있어도 함께할게요.</li>
               <li>사정이 생기면 혼자 결정하지 않고 몽글과 먼저 상의할게요. (🤝 돌아오기 약속)</li>
             </ol>
-            <label class="check" style="font-size:14px"><input type="checkbox" id="liveAgree"> [필수] 위 약속을 지키고, 분양 계약서(15일 건강보증, 단순 변심 반품 불가)를 확인했어요.</label>
+            <label class="check" style="font-size:14px"><input type="checkbox" id="liveAgree"> [필수] 위 약속을 지키고, 분양 계약서(15일 건강보증, 마음이 바뀌어도 돌려보내지 않기)를 확인했어요.</label>
           </div>
           <div class="error-text" id="liveErr"></div>
         </section>` : ''}
