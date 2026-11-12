@@ -1,6 +1,6 @@
 // 공통 유틸 + 헤더/푸터 렌더링
-const BRAND = 'PIKK.';
-const LOGO = 'PIKK<i>.</i>';
+const BRAND = '몽글';
+const LOGO = '<span class="paw" aria-hidden="true">🐾</span>몽글<i aria-hidden="true">♥</i>';
 const ICON = {
   search: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>',
   user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
@@ -69,6 +69,7 @@ function petCard(p) {
         ${p.pet && p.pet.note ? `<div class="pet-note">“${esc(p.pet.note)}”</div>` : ''}
         <div class="adopt-fee"><span>분양비</span> ${won(p.price)}</div>
         <div class="tags">
+          ${p.isNew && !p.soldOut ? '<span class="tag tag-new">🍼 새로 왔어요</span>' : ''}
           ${p.soldOut ? '<span class="tag tag-home">💛 가족을 찾았어요</span>' : '<span class="tag tag-wait">🏡 가족을 기다려요</span>'}
           <span class="tag tag-free">🩺 15일 건강보증</span>
         </div>
@@ -202,7 +203,7 @@ function renderHeader() {
   </div></div>
   <header class="header">
     <div class="container header-main">
-      <a href="index.html" class="logo" aria-label="PIKK 홈">${LOGO}</a>
+      <a href="index.html" class="logo" aria-label="몽글 홈">${LOGO}</a>
       <form class="search" action="products.html" role="search" id="searchForm" autocomplete="off">
         <input name="q" id="searchInput" type="search" placeholder="어떤 친구를 찾고 있나요? 🐾" value="${esc(q)}" aria-label="상품 검색" maxlength="50">
         <button type="submit" aria-label="검색">${ICON.search}</button>
@@ -337,14 +338,14 @@ function renderFooter() {
   $('#footer').outerHTML = `
   <footer class="footer" id="footer"><div class="container">
     <div class="footer-cols">
-      <div><strong>${LOGO}</strong>오늘의 픽, 평생의 가족.<br>정성껏 키워주실 분께, 정성껏 보내드려요.</div>
+      <div><strong>${LOGO}</strong>몽글몽글, 평생 가족.<br>정성껏 키워주실 분께, 정성껏 보내드려요.</div>
       <div><strong>고객센터</strong>1588-0000<br>평일 09:00–18:00<br><a href="help.html">자주 묻는 질문 · 공지 →</a></div>
       <div><strong>책임 분양</strong>입양 신청서 검토 후 분양 · 15일 건강보증<br>생명은 택배 없이 직접 인계 · 동물판매업 등록 (데모)</div>
       <div><strong>분양자·브리더</strong><a href="seller.html">책임 분양 함께하기 →</a><br>용품 ${won(FREE_SHIPPING_MIN)} 이상 무료배송</div>
     </div>
     <div class="notice">⚠️ 학습용 데모 사이트입니다. 실제 결제·배송이 이루어지지 않으며, 회원·주문·상품 정보는 이 브라우저(localStorage)에만 저장됩니다. 실제 분양이 아니며, 상품 사진은 Unsplash 무료 라이선스 이미지입니다. 실제 사용하는 비밀번호를 입력하지 마세요.</div>
-    <div class="footer-bottom"><span>© 2026 PIKK. All rights reserved.</span><button class="link-btn" id="toTop" type="button">맨 위로 ↑</button></div>
-    <div class="wordmark" aria-hidden="true">PIKK<i>.</i></div>
+    <div class="footer-bottom"><span>© 2026 mongle. All rights reserved.</span><button class="link-btn" id="toTop" type="button">맨 위로 ↑</button></div>
+    <div class="wordmark" aria-hidden="true">mongle<i>♥</i></div>
   </div></footer>`;
   $('#toTop').addEventListener('click', () => scrollTo({ top: 0, behavior: 'smooth' }));
 }

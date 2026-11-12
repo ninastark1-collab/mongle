@@ -5,7 +5,7 @@
     return;
   }
   const hidden = p.status === 'hidden';
-  document.title = p.name + ' | PIKK.';
+  document.title = p.name + ' | 몽글';
   if (!hidden) Recent.add(p.id);
   const cat = getCategory(p.category);
   const maxQty = Math.max(1, Math.min(99, p.stock));
@@ -54,7 +54,7 @@
           ${p.live ? '<span class="tag tag-fast">🩺 건강보증 15일</span><span class="tag tag-free">직접 인계</span>' : ''}
           ${!p.live && p.fast ? '<span class="tag tag-fast">🚀 내일도착</span>' : ''}
           ${!p.live && p.freeShip ? '<span class="tag tag-free">무료배송</span>' : ''}
-          ${p.sellerEmail ? `<span class="tag tag-seller">${p.live ? '분양자 · ' : ''}${esc(p.seller)}</span>` : `<span class="tag tag-seller">✔ ${p.live ? 'PIKK. 분양 하우스' : 'PIKK. 직영'}</span>`}
+          ${p.sellerEmail ? `<span class="tag tag-seller">${p.live ? '분양자 · ' : ''}${esc(p.seller)}</span>` : `<span class="tag tag-seller">✔ ${p.live ? '몽글 분양 하우스' : '몽글 직영'}</span>`}
         </div>
         <h1>${esc(p.name)}</h1>
         ${p.live
@@ -123,7 +123,7 @@
         <div style="max-width:420px;margin:20px auto">${thumb({ ...p, soldOut: false })}</div>
         <table class="info-table">
           <tr><th>카테고리</th><td>${cat.name}</td></tr>
-          <tr><th>${p.live ? '개체번호' : '상품번호'}</th><td>PK-${String(p.id).padStart(6, '0')}</td></tr>
+          <tr><th>${p.live ? '개체번호' : '상품번호'}</th><td>MG-${String(p.id).padStart(6, '0')}</td></tr>
           <tr><th>판매자</th><td>${esc(p.seller)}</td></tr>
           ${p.options.length ? `<tr><th>옵션</th><td>${p.options.map(esc).join(', ')}</td></tr>` : ''}
         </table>

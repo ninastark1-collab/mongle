@@ -12,7 +12,7 @@
   function renderJoin() {
     $('#app').innerHTML = `
       <div class="auth-box" style="max-width:520px">
-        <div class="seller-top"><div class="eyebrow">PIKK. for sellers</div><h1>셀러 등록하기</h1><div>3분이면 내 상품을 판매할 수 있어요. 수수료 0% (데모)</div></div>
+        <div class="seller-top"><div class="eyebrow">몽글 분양자·셀러</div><h1>셀러 등록하기</h1><div>3분이면 내 상품을 판매할 수 있어요. 수수료 0% (데모)</div></div>
         <form class="card" id="joinForm" novalidate>
           <div class="field"><label for="storeName">스토어 이름</label><input class="input" id="storeName" maxlength="20" placeholder="예: 행복한 과일가게"><div class="error-text" data-err="storeName"></div></div>
           <div class="field"><label for="bizNo">사업자등록번호 (데모: 아무 숫자 10자리)</label><input class="input" id="bizNo" inputmode="numeric" placeholder="123-45-67890"><div class="error-text" data-err="bizNo"></div></div>

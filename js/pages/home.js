@@ -4,6 +4,7 @@
   const deals = supplies.slice().sort((a, b) => b.discount - a.discount).slice(0, 5);
   const best = live.slice().sort((a, b) => (b.sold || 0) * 50 + b.reviewCount - ((a.sold || 0) * 50 + a.reviewCount)).slice(0, 8);
   const easy = live.filter(p => p.pet && p.pet.care === '초보 추천').slice(0, 5);
+  const babies = live.filter(p => p.isNew).slice(0, 10);
   const fresh = PRODUCTS.filter(p => p.sellerEmail).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)).slice(0, 5);
   const recent = Recent.list().map(getProduct).filter(p => p && p.status !== 'hidden').slice(0, 5);
   const maxDeal = Math.max(0, ...supplies.map(p => p.discount));
@@ -63,7 +64,7 @@
     </section>
 
     <section class="section">
-      <div class="section-head"><div><div class="eyebrow" id="how">How adoption works</div><h2>PIKK.의 책임 분양은 이렇게 진행돼요</h2></div><a href="help.html">자세히 보기</a></div>
+      <div class="section-head"><div><div class="eyebrow" id="how">How adoption works</div><h2>몽글의 책임 분양은 이렇게 진행돼요</h2></div><a href="help.html">자세히 보기</a></div>
       <div class="help-grid adopt-steps">
         <div class="card"><span class="ico">💌</span><strong>1. 입양 신청서</strong><span class="muted">가족 동의, 사는 곳, 반려 경험, 혼자 있는 시간, 입양 이유를 적어주세요.</span></div>
         <div class="card"><span class="ico">🤝</span><strong>2. 분양자 검토·상담</strong><span class="muted">아이와 잘 맞는 가족인지 신청서를 읽고, 1일 안에 연락드려요.</span></div>
@@ -95,6 +96,12 @@
       </div>
       <div class="grid cols-5">${deals.map(p => productCard(p)).join('')}</div>
     </section>
+
+    ${babies.length ? `
+    <section class="section">
+      <div class="section-head"><div><div class="eyebrow">New arrivals</div><h2>이번 주 새로 온 아기들 🍼</h2></div><a href="products.html?live=1&sort=new">모두 보기</a></div>
+      <div class="grid cols-5">${babies.map(p => productCard(p)).join('')}</div>
+    </section>` : ''}
 
     <section class="section">
       <div class="section-head"><div><div class="eyebrow">First pet?</div><h2>처음 함께한다면, 이 친구들을 만나보세요 🌱</h2></div><a href="products.html?live=1&care=easy">더보기</a></div>

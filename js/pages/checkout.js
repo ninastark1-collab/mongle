@@ -11,7 +11,7 @@
 
   const hasLive = lines.some(l => l.product.live);
   const liveOnly = lines.every(l => l.product.live);
-  if (hasLive) document.title = '입양 신청서 | PIKK.';
+  if (hasLive) document.title = '입양 신청서 | 몽글';
   const radios = (name, opts) => `<div class="choice-row">${opts.map(o => `<label><input type="radio" name="${name}" value="${o}"> ${o}</label>`).join('')}</div>`;
   const book = AddressBook.list();
   const addr = AddressBook.getDefault() || {};
@@ -96,7 +96,7 @@
           <select class="select" id="couponSel" aria-label="쿠폰 선택"></select>
           <div id="couponMsg"></div>
           <div class="coupon-row" style="margin-top:10px"><input class="input" id="couponInput" placeholder="쿠폰 코드가 있다면 입력해 등록하세요"><button class="btn" id="couponBtn">등록</button></div>
-          <div class="demo-note">쿠폰은 홈 화면 쿠폰존에서 받을 수 있어요. 데모 코드: <strong>WELCOME10</strong> · <strong>PIKK5000</strong> · <strong>SALE15</strong></div>
+          <div class="demo-note">쿠폰은 홈 화면 쿠폰존에서 받을 수 있어요. 데모 코드: <strong>WELCOME10</strong> · <strong>MONGLE5000</strong> · <strong>SALE15</strong></div>
         </section>
 
         <section class="card co-section ${liveOnly ? 'hidden' : ''}">

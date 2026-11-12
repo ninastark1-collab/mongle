@@ -223,7 +223,7 @@ const Orders = {
         if (it.sellerEmail || !STATUS_FLOW.slice(0, 3).includes(it.status)) return;
         if (STATUS_FLOW.indexOf(auto) > STATUS_FLOW.indexOf(it.status)) {
           it.status = auto;
-          if (auto === '배송중' && !it.tracking) it.tracking = 'PK' + String(Math.floor(Math.random() * 1e10)).padStart(10, '0');
+          if (auto === '배송중' && !it.tracking) it.tracking = 'MG' + String(Math.floor(Math.random() * 1e10)).padStart(10, '0');
           changed = true;
         }
       });
