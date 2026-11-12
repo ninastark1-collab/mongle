@@ -989,3 +989,8 @@ h1, h2, h3, .logo, .section-head h2, h1.page-title, .bento h3, .cta-band h3, .ti
   .quiz-fab .fab-ico { font-size: 24px; }
   .has-fab main.container { padding-bottom: 96px; }
 }
+
+/* v18: 처음 준비 비용 */
+.fee-setup { background: #fff8ec; border-radius: 14px; padding: 10px 12px; margin: 0 0 10px; font-size: 13px; color: #5f4c47; }
+.fee-setup b { color: var(--text); }
+.fee-setup span { display: block; font-size: 12px; color: var(--muted); margin-top: 2px; }

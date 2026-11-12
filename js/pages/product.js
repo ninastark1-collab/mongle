@@ -112,6 +112,7 @@
             <div class="fee-scale"><span>${feeText(p.fee.lo)}</span><span class="muted">${esc(getCategory(p.category).name)} · ${esc(p.name.split(' · ')[0])} 일반 시세</span><span>${feeText(p.fee.hi)}</span></div>
           </div>`}
           <p class="fee-why">${esc(p.fee.why)}</p>
+          ${p.fee.setup ? `<div class="fee-setup">🧰 처음 준비 비용 약 <b>${feeText(p.fee.setup[0])}~${feeText(p.fee.setup[1])}</b><span>${esc(p.fee.setup[2])}</span></div>` : ''}
           <div class="fee-inc">${p.fee.includes.map(t => `<span>✓ ${esc(t)}</span>`).join('')}</div>
         </div>` : `<div class="total-line"><span>준비물 금액</span><strong id="total">${won(p.price)}</strong></div>`}
         <div class="actions">

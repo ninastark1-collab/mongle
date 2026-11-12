@@ -87,7 +87,7 @@ const Catalog = {
         origin: { place: `분양자 '${p.seller}'의 집에서 태어났어요`, parents: p.pet.parents || '부모 정보는 만남 때 안내해 드려요', visit: true },
         birth: p.pet.birth || d.birth,
       },
-      fee: p.fee || { type: '분양비', lo: 0, hi: 0, pos: 0.5, noRange: true, why: '분양자가 정한 분양비예요. 건강검진·접종 등 지금까지의 돌봄 비용이 포함돼 있어요.', includes: FEE_INCLUDES[p.category] || [] },
+      fee: p.fee || { type: '분양비', lo: 0, hi: 0, pos: 0.5, noRange: true, why: '분양자가 정한 분양비예요. 건강검진·접종 등 지금까지의 돌봄 비용이 포함돼 있어요.', includes: FEE_INCLUDES[p.category] || [], setup: (typeof SETUP_COST !== 'undefined' && SETUP_COST[p.category]) || null },
     };
   },
   // 진열 중인 상품 (판매중지 제외)
