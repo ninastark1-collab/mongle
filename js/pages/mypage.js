@@ -219,7 +219,7 @@
     const add = $('#addAddr');
     if (add) add.addEventListener('click', () => openAddress(null));
     $$('[data-rebuy]').forEach(b => b.addEventListener('click', () => {
-      if (Cart.add(Number(b.dataset.rebuy), b.dataset.opt, 1)) toast('장바구니에 담았어요.', 'cart.html', '장바구니 보기');
+      if (Cart.add(Number(b.dataset.rebuy), b.dataset.opt, 1)) toast('입양 준비함에 담았어요. 🧺', 'cart.html', '장바구니 보기');
       else toast('지금은 구매할 수 없는 상품이에요.');
     }));
     const cr = $('#clearRecent');

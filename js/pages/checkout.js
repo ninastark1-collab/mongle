@@ -5,7 +5,7 @@
   const lines = (co && co.items || []).map(i => ({ ...i, product: getProduct(i.id) })).filter(l => l.product);
 
   if (!lines.length) {
-    $('#app').innerHTML = `<div class="empty card"><div class="ico">🧾</div><p>주문할 상품이 없어요.</p><a class="btn btn-primary" href="cart.html">장바구니로 가기</a></div>`;
+    $('#app').innerHTML = `<div class="empty card"><div class="ico">🧾</div><p>신청하거나 주문할 내용이 없어요.</p><a class="btn btn-primary" href="cart.html">준비함으로 가기</a></div>`;
     return;
   }
 
@@ -255,8 +255,8 @@
       if (!cur || cur.status === 'hidden' || cur.stock < l.qty) {
         modal({
           title: '구매할 수 없는 상품이 있어요',
-          body: `<p><b>${esc(l.product.name)}</b><br>${!cur || cur.status === 'hidden' ? '판매가 중지되었어요.' : `남은 재고가 ${cur.stock}개예요.`}<br>장바구니에서 수량을 조정해 주세요.</p>`,
-          okText: '장바구니로', cancelText: '',
+          body: `<p><b>${esc(l.product.name)}</b><br>${!cur || cur.status === 'hidden' ? '판매가 중지되었어요.' : `남은 재고가 ${cur.stock}개예요.`}<br>준비함에서 수량을 조정해 주세요.</p>`,
+          okText: '준비함으로', cancelText: '',
           onOk: () => { location.href = 'cart.html'; },
         });
         return;

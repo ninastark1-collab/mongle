@@ -70,7 +70,8 @@
           <div><b>평균 수명</b>${esc(p.pet.lifespan)}</div>
           <div><b>다 자란 크기</b>${esc(p.pet.size)}</div>
           <div><b>키우기 난이도</b>${esc(p.pet.care)}</div>
-        </div>` : ''}
+        </div>
+        ${p.pet.traits && p.pet.traits.length ? `<div class="trait-row">${p.pet.traits.map(t => `<span class="trait">${TRAIT_LABELS[t]}</span>`).join('')}</div>` : ''}` : ''}
         ${p.live ? `<dl class="ship-box">
           <dt>인계</dt><dd><strong>매장 방문</strong> 또는 <strong>전문 펫택시</strong> 직접 인계 (택배 발송 없음)</dd>
           <dt>함께 드려요</dt><dd>분양 계약서 · 건강 기록 · 먹던 사료 샘플</dd>
@@ -96,7 +97,7 @@
           <div class="qty"><button id="minus" aria-label="수량 감소">−</button><input id="qty" value="1" inputmode="numeric" aria-label="수량"><button id="plus" aria-label="수량 증가">+</button></div>
         </div>
 
-        <div class="total-line"><span>${p.live ? '분양비 <span class="muted" style="font-size:12px;font-weight:400">(건강검진·접종·돌봄 비용)</span>' : '총 상품 금액'}</span><strong id="total">${won(p.price)}</strong></div>
+        <div class="total-line"><span>${p.live ? '분양비 <span class="muted" style="font-size:12px;font-weight:400">(건강검진·접종·돌봄 비용)</span>' : '총 상품 금액'}</span><strong id="total">${p.live ? feeText(p.price) : won(p.price)}</strong></div>
         <div class="actions">
           <button class="btn" id="wish" aria-label="${p.live ? '관심 친구로 저장' : '찜하기'}" aria-pressed="${Wish.has(p.id)}">${Wish.has(p.id) ? '❤️' : '🤍'}</button>
           ${p.soldOut || hidden
@@ -104,7 +105,7 @@
               : `<button class="btn btn-primary btn-lg" id="restock" style="grid-column:span 2"></button>`)
             : p.live
               ? `<button class="btn btn-primary btn-lg" id="buyNow" style="grid-column:span 2">💌 입양 신청하기</button>`
-              : `<button class="btn btn-outline btn-lg" id="addCart">장바구니 담기</button>
+              : `<button class="btn btn-outline btn-lg" id="addCart">🧺 준비함에 담기</button>
                <button class="btn btn-primary btn-lg" id="buyNow">바로구매</button>`}
         </div>
         <button class="link-btn" id="share" style="margin-top:12px">🔗 ${p.live ? '친구 소개 링크 복사' : '상품 링크 복사'}</button>
@@ -239,8 +240,8 @@
       const before = (Cart.items().find(i => i.key === key) || {}).qty || 0;
       const after = Cart.add(p.id, opt, want);
       if (!after) toast('방금 품절되어 담을 수 없어요.');
-      else if (after < before + want) toast(`재고가 부족해 ${after}개까지만 담았어요.`, 'cart.html', '장바구니 보기');
-      else toast(before ? `장바구니에 있던 상품의 수량을 ${after}개로 늘렸어요.` : '장바구니에 담았어요.', 'cart.html', '장바구니 보기');
+      else if (after < before + want) toast(`재고가 부족해 ${after}개까지만 담았어요.`, 'cart.html', '준비함 보기');
+      else toast(before ? `준비함에 있던 준비물을 ${after}개로 늘렸어요.` : '입양 준비함에 담았어요. 🧺', 'cart.html', '준비함 보기');
     });
   }
   // 바로구매 / 입양 신청 (반려동물은 장바구니 버튼이 없음)

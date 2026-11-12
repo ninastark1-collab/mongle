@@ -22,11 +22,36 @@
     });
   }
 
+  // 관심 친구: 찜한 반려동물 (입양 신청으로 연결)
+  function petsHtml() {
+    const pets = Wish.list().map(getProduct).filter(p => p && p.live && p.status !== 'hidden');
+    const head = `<div class="section-head" style="margin-bottom:12px"><div><div class="eyebrow">My favorite friends</div><h2>💌 마음에 담아둔 친구</h2></div><a href="products.html?live=1">더 만나보기</a></div>`;
+    if (!pets.length) {
+      return `<section class="card prep-pets">${head}<p class="muted" style="margin:0">친구 페이지에서 🤍를 누르면 여기에 모여요. 천천히 고민하고 입양 신청해 주세요.</p></section>`;
+    }
+    return `<section class="card prep-pets">${head}
+      <div class="pet-row">${pets.map(p => `<div class="pet-mini">
+        <a href="product.html?id=${p.id}">${thumb(p, 'sm')}</a>
+        <div><a href="product.html?id=${p.id}"><strong>${esc(p.name.split(' · ')[0])}</strong></a>
+          <div class="muted" style="font-size:12px">${p.pet ? esc(p.pet.age) + ' · ' : ''}분양비 ${feeText(p.price)}</div>
+          ${p.soldOut ? '<span class="tag tag-home">💛 가족을 찾았어요</span>' : `<a class="btn btn-sm btn-primary" href="product.html?id=${p.id}">💌 입양 신청하기</a>`}</div>
+      </div>`).join('')}</div></section>`;
+  }
+  // 함께 준비하면 좋은 용품
+  function suggestHtml() {
+    const inCart = Cart.items().map(i => i.id);
+    const list = PRODUCTS.filter(p => !p.live && !p.soldOut && !inCart.includes(p.id)).slice(0, 4);
+    return list.length ? `<section class="section" style="margin-top:36px"><div class="section-head"><div><div class="eyebrow">Welcome kit</div><h2>새 가족 맞이, 이것도 준비해요 🦴</h2></div><a href="products.html?cat=supplies">준비물 더 보기</a></div>
+      <div class="grid">${list.map(p => productCard(p)).join('')}</div></section>` : '';
+  }
+
   function render() {
     const all = lines();
     if (!all.length) {
-      $('#app').innerHTML = `<h1 class="page-title">장바구니</h1>
-        <div class="empty card"><div class="ico">🛒</div><p>장바구니에 담긴 상품이 없어요.</p><a class="btn btn-primary" href="index.html">쇼핑 계속하기</a></div>`;
+      $('#app').innerHTML = `<h1 class="page-title">🧺 입양 준비함</h1>
+        ${petsHtml()}
+        <div class="empty card" style="margin-top:16px"><div class="ico">🦴</div><p>아직 담은 준비물이 없어요.<br>새 가족을 맞이할 사료·방석·장난감을 담아보세요.</p><a class="btn btn-primary" href="products.html?cat=supplies">준비물 보러 가기</a></div>
+        ${suggestHtml()}`;
       return;
     }
     const buyable = all.filter(l => !l.reason);
@@ -37,7 +62,9 @@
     const bad = all.filter(l => l.reason);
 
     $('#app').innerHTML = `
-      <h1 class="page-title">장바구니 (${all.length})</h1>
+      <h1 class="page-title">🧺 입양 준비함</h1>
+      ${petsHtml()}
+      <h2 class="prep-title">🦴 새 가족 맞이 준비물 (${all.length})</h2>
       <div class="cart-layout">
         <section class="card">
           <div class="cart-head">
@@ -70,7 +97,7 @@
           }).join('')}
         </section>
         <aside class="card summary">
-          <h3>결제 예정 금액</h3>
+          <h3>준비물 결제 예정</h3>
           <div class="sum-row"><span>상품금액</span><span>${won(t.originTotal)}</span></div>
           <div class="sum-row"><span>할인금액</span><span style="color:var(--danger)">-${won(t.saved)}</span></div>
           <div class="sum-row"><span>배송비</span><span>${t.shipping ? '+' + won(t.shipping) : '무료'}</span></div>
@@ -78,11 +105,12 @@
           ${checked.length && Auth.current() && CouponBox.usable().length ? `<div class="muted" style="font-size:13px">🎟️ 보유 쿠폰 ${CouponBox.usable().length}장 · 결제 단계에서 자동 적용돼요</div>` : ''}
           <div class="sum-row total"><span>총 결제금액</span><span>${won(t.total)}</span></div>
           <button class="btn btn-primary btn-lg btn-block" id="order" style="margin-top:14px" ${checked.length ? '' : 'disabled'}>
-            ${checked.length ? `${checked.length}개 상품 주문하기` : '상품을 선택하세요'}
+            ${checked.length ? `준비물 ${checked.length}개 주문하기` : '준비물을 선택하세요'}
           </button>
-          <a class="btn btn-block" href="index.html" style="margin-top:8px">쇼핑 계속하기</a>
+          <a class="btn btn-block" href="products.html?cat=supplies" style="margin-top:8px">준비물 더 둘러보기</a>
         </aside>
-      </div>`;
+      </div>
+      ${suggestHtml()}`;
     bind();
   }
 
@@ -102,7 +130,7 @@
       if (!keys.length) return;
       modal({
         title: '선택 상품 삭제',
-        body: `<p>선택한 ${keys.length}개 상품을 장바구니에서 삭제할까요?</p>`,
+        body: `<p>선택한 준비물 ${keys.length}개를 준비함에서 뺄까요?</p>`,
         okText: '삭제',
         onOk: () => { Cart.removeKeys(keys); render(); toast('삭제했어요.'); },
       });

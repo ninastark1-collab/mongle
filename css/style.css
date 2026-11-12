@@ -808,3 +808,21 @@ h1, h2, h3, .logo, .section-head h2, h1.page-title, .bento h3, .cta-band h3, .ti
   .logo i, .bento-main::after, .bento-main::before { animation: none !important; }
 }
 .tag-new { background: #dff0ff; color: #2d6aa8; }
+
+/* v11: 맞춤 필터 · 입양 준비함 · 생활 궁합 */
+.chip-wrap { display: flex; flex-wrap: wrap; gap: 6px; }
+.f-chip { border: 1.5px solid var(--line); background: #fff; color: var(--text); border-radius: 999px; padding: 7px 12px; font-size: 13px; font-weight: 600; line-height: 1.3; text-align: left; transition: all .2s var(--ease); }
+.f-chip:hover { border-color: var(--sage); background: #fff7f9; }
+.f-chip.on { background: var(--hot); border-color: var(--hot); color: #fff; }
+.filters .group h3 { font-family: var(--display); font-weight: 400; font-size: 16px; margin: 0 0 10px; }
+.side-tip { background: linear-gradient(135deg, #fff0f3, #fff6dc); border-radius: 18px; padding: 14px 16px !important; border: 0 !important; }
+.side-tip p { font-size: 13px; margin: 0 0 10px; }
+.side-tip ul { margin: 0; padding-left: 18px; font-size: 13px; line-height: 1.8; }
+.trait-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 14px; }
+.trait { background: #fff; border: 1.5px solid var(--line); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; }
+.prep-pets { margin-bottom: 22px; }
+.pet-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+.pet-mini { display: flex; gap: 12px; align-items: center; background: #fff8fa; border-radius: 18px; padding: 10px; }
+.pet-mini .thumb.sm { width: 76px; height: 76px; flex-shrink: 0; }
+.pet-mini > div { display: flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.prep-title { font-family: var(--display); font-weight: 400; font-size: 24px; margin: 6px 0 12px; }

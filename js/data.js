@@ -142,12 +142,31 @@ const PET_NOTES = {
   54: '점박이 무늬의 아기 게코예요. 순하고 조용해서 처음 키우는 분께도 좋아요.',
   55: '아이와 여름방학 관찰 일기를 쓰기 좋은 한 쌍이에요. 젤리를 정말 잘 먹어요.',
 };
+// 우리 집과 잘 맞는지: 생활 궁합
+const TRAIT_LABELS = {
+  apt: '🏢 아파트에서도 좋아요',
+  alone: '🕰️ 혼자서도 잘 지내요',
+  lowshed: '🧹 털 날림이 적어요',
+  kids: '🧒 아이와 함께해도 좋아요',
+  quiet: '🤫 조용한 편이에요',
+};
+const TRAIT_DEFAULT = {
+  dog: [], cat: ['apt', 'alone', 'quiet'], small: ['apt', 'quiet', 'kids'], bird: ['apt'],
+  fish: ['apt', 'alone', 'quiet', 'lowshed'], reptile: ['apt', 'alone', 'quiet', 'lowshed'], insect: ['apt', 'alone', 'quiet', 'lowshed', 'kids'],
+};
+const TRAIT_OVERRIDE = {
+  1: ['apt', 'lowshed', 'kids'], 2: ['apt'], 3: ['apt', 'lowshed', 'kids'], 4: ['apt', 'lowshed', 'kids'], 5: [], 6: ['kids'], 7: ['kids'], 8: ['apt'],
+  43: ['kids'], 44: ['apt', 'quiet', 'kids'], 45: ['apt', 'kids', 'quiet'],
+  11: ['apt', 'quiet'], 13: ['apt'], 47: ['apt', 'kids'],
+  14: ['apt', 'quiet', 'alone', 'kids'], 50: ['apt', 'quiet', 'alone', 'kids'], 17: ['apt', 'quiet'], 18: ['apt', 'quiet', 'alone'], 19: ['apt'], 20: ['apt'],
+  21: ['apt', 'kids'], 52: ['apt', 'kids'], 22: ['apt', 'kids'], 24: ['apt', 'alone'], 25: ['apt', 'quiet', 'alone'],
+};
 const SHIP_EMOJI = '🐾';
 const BASE_PRODUCTS = [
   ...PETS.map(([id, category, name, price, photo, emoji, stock, age, health, lifespan, care, size, options], i) => ({
     id, category, name, price, originalPrice: price, emoji, options,
     image: PHOTO(photo), live: true,
-    pet: { age, health, lifespan, care: CARE[care], size, note: PET_NOTES[id] || '' },
+    pet: { age, health, lifespan, care: CARE[care], size, note: PET_NOTES[id] || '', traits: TRAIT_OVERRIDE[id] || TRAIT_DEFAULT[category] || [] },
     rating: 4.7 + (id % 3) / 10, reviews: 20 + (id * 37) % 260,
     fast: false, freeShip: true,
     gradient: GRADIENTS[id % GRADIENTS.length],

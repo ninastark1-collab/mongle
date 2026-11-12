@@ -6,6 +6,7 @@ const ICON = {
   user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>',
   bag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M5 8h14l-1.2 12.2a1 1 0 0 1-1 .8H7.2a1 1 0 0 1-1-.8L5 8z"/><path d="M9 8V6a3 3 0 0 1 6 0v2" stroke-linecap="round"/></svg>',
   bell: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 16V11a6 6 0 0 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/></svg>',
+  basket: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10h18l-1.6 8.4a2 2 0 0 1-2 1.6H6.6a2 2 0 0 1-2-1.6z"/><path d="M8 10l3-6M16 10l-3-6"/><path d="M12 17.2s-2.6-1.5-2.6-3.2a1.4 1.4 0 0 1 2.6-.7 1.4 1.4 0 0 1 2.6.7c0 1.7-2.6 3.2-2.6 3.2z"/></svg>',
   heart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg>',
 };
 
@@ -13,6 +14,15 @@ function esc(s) {
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 function won(n) { return Number(n || 0).toLocaleString('ko-KR') + '원'; }
+// 분양비처럼 큰 금액은 '160만원', '2만 5천원'처럼 읽기 쉽게
+function feeText(n) {
+  n = Math.round(Number(n || 0));
+  const man = Math.floor(n / 10000), rest = n % 10000;
+  if (man && !rest) return man.toLocaleString('ko-KR') + '만원';
+  if (man && rest % 1000 === 0) return `${man.toLocaleString('ko-KR')}만 ${rest / 1000}천원`;
+  if (!man && n && n % 1000 === 0) return (n / 1000) + '천원';
+  return won(n);
+}
 function param(name) { return new URLSearchParams(location.search).get(name); }
 function $(sel, root = document) { return root.querySelector(sel); }
 function $$(sel, root = document) { return Array.from(root.querySelectorAll(sel)); }
@@ -67,7 +77,7 @@ function petCard(p) {
         <div class="name">${esc(p.name)}</div>
         ${p.pet ? `<div class="pet-meta">${esc(p.pet.age)} · ${esc(p.pet.care)}</div>` : ''}
         ${p.pet && p.pet.note ? `<div class="pet-note">“${esc(p.pet.note)}”</div>` : ''}
-        <div class="adopt-fee"><span>분양비</span> ${won(p.price)}</div>
+        <div class="adopt-fee"><span>분양비</span> ${feeText(p.price)}</div>
         <div class="tags">
           ${p.isNew && !p.soldOut ? '<span class="tag tag-new">🍼 새로 왔어요</span>' : ''}
           ${p.soldOut ? '<span class="tag tag-home">💛 가족을 찾았어요</span>' : '<span class="tag tag-wait">🏡 가족을 기다려요</span>'}
@@ -213,7 +223,7 @@ function renderHeader() {
         ${user ? `<div class="noti-wrap"><button type="button" class="icon-btn" id="notiBtn" aria-label="알림" aria-expanded="false">${ICON.bell}<span class="label">알림</span><span id="notiCount" class="badge-count hidden">0</span></button><div class="noti-panel hidden" id="notiPanel"></div></div>` : ''}
         <a href="mypage.html?tab=wish" aria-label="관심 친구">${ICON.heart}<span class="label">관심</span></a>
         <a href="mypage.html" aria-label="마이페이지">${ICON.user}<span class="label">MY</span></a>
-        <a href="cart.html" aria-label="장바구니">${ICON.bag}<span class="label">장바구니</span><span id="cartCount" class="badge-count hidden">0</span></a>
+        <a href="cart.html" aria-label="입양 준비함">${ICON.basket}<span class="label">준비함</span><span id="cartCount" class="badge-count hidden">0</span></a>
       </nav>
     </div>
     <nav class="catnav"><div class="container">
